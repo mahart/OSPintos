@@ -27,24 +27,67 @@ FirstName LastName <email@k-state.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct thread
+  {
+    /* Owned by thread.c. */
+    tid_t tid;                          /* Thread identifier. */
+    enum thread_status status;          /* Thread state. */
+    char name[16];                      /* Name (for debugging purposes). */
+    uint8_t *stack;                     /* Saved stack pointer. */
+    int priority;                       /* Priority. */
+    struct list_elem allelem;           /* List element for all threads list. */
+    /* Shared between thread.c and synch.c. */
+    struct list_elem elem;              /* List element. */
+    //Sleep semaphore
+    struct semaphore sema_sleep;
+    //sleep ticks
+    int64_t ticks_sleep;
+#ifdef USERPROG
+    /* Owned by userprog/process.c. */
+    uint32_t *pagedir;                  /* Page directory. */
+#endif
+
+    /* Owned by thread.c. */
+    unsigned magic;                     /* Detects stack overflow. */
+  };
+
+	Added an int_64 ticks_sleep to keep track of how long the thread needs to sleeps.
+	Added a semaphore sema_sleep to serve as a binary semaphore to control 
+		when the thread sleeps.
 
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to your timer_sleep(),
 >> including the effects of the timer interrupt handler.
+	When the program calls timer_sleep(), it checks if the number of ticks is > 0.
+	This is used for an optimization in timer_interrupt. Timer_sleep() then initializes 
+	the thread's sema_sleep with a value of 0, it initializes ticks_sleep to the passed in 
+	number of ticks, and the it calls sema_down on the current thread's  sema_sleep. 
+	Sema_down blocks the current thread until sema_up is called.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
-
+	The timer_interrupt handler calls a wake_sleeping_thread function for each thread.
+	This funtion runs if the thread is blocked and the thread was blocked using timer_sleep()
+	We guarantee the second conditions by checking if  the threads ticks_sleep >0.  Currently, 
+	timer_ticks can only be assigned a value > 0 in timer_sleep. We further reduce time spent in
+	the interrupt by only decrementing the valid threads once, without using a loop.
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
-
+	We use thread_current()->sema_sleep to get the thread that called timer_sleep(). 
+	if another thread called timer_sleep at the same time, then thread_current() will switch 
+	accordingly and avoid sleeping the wrong thread.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+	We use sema_up and sema_down to control locking and unlocking the thread.  Sema_up can only
+	be called from the interrupt if the thread was locked using timer_sleep. If timer_interrupt
+	is called during timer_sleep, both conditions to be "put to sleep" will not be valid: the 		ticks_sleep will be > 0, but the thread hasn't been block yet by sema_down. After the 
+	interrupt finishes, sema_down would be called, locking the thread and allowing the interrupt
+	to call wake_sleeping_threads on the next tick.
 
 
 ---- RATIONALE ----
@@ -52,7 +95,15 @@ FirstName LastName <email@k-state.edu>
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> other designs that you considered?
 
-We went with semaphores so the processes can be queued up faster. 
+	We choose this method because it was easy to implement and it would ensure synchronization.
+	Another option we considered was to give each thread a semaphore, initialize the semaphore to
+	to the tick value in timer_sleep, and then manually block the semaphore.  We would then use 
+	a function very similar to wake_sleeping_threads to call sema_try_down on the blocked threads.
+	Once sema_try_down returned false, we would call sema_up to wake the sleeping threads.
+
+	Our design provided better synchronization because it had a second variable to help controll 
+	when how we wake the threads.  By using ticks_sleep to ensure that timer_sleep blocked the
+	thread,	we guaranteed we didn't accidentally wake up a thread that was blocked by a different 		method.
 
 
 
