@@ -92,13 +92,16 @@ timer_sleep (int64_t ticks)
   //if the number of ticks are invalid, return.
   //Cannot set ticks to 0. If ticks == 0, then 
   // wake_sleeping_threads() will never wake the thread
+  enum intr_level old_level;
   if (ticks<=0)
 	return;
 
   ASSERT (intr_get_level () == INTR_ON);
   
   sema_init(&thread_current()->sema_sleep,0);
+  old_level = intr_disable ();
   thread_current()->ticks_sleep = ticks;
+  intr_set_level (old_level);
   sema_down(&thread_current()->sema_sleep); 
 
 }
@@ -257,9 +260,12 @@ real_time_delay (int64_t num, int32_t denom)
 /* Wakes a sleeping thread if enough ticks have passed*/
 static void wake_sleeping_threads(struct thread *t, void *aux)
 {
+  enum intr_level old_level;
   if (t->status == THREAD_BLOCKED && t->ticks_sleep>0)
   {
+     old_level = intr_disable ();
      t->ticks_sleep = t->ticks_sleep - 1;
+     intr_set_level (old_level);
      if(t->ticks_sleep==0)
      {
         sema_up(&t->sema_sleep);

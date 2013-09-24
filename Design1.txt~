@@ -101,10 +101,6 @@ struct thread
 	a function very similar to wake_sleeping_threads to call sema_try_down on the blocked threads.
 	Once sema_try_down returned false, we would call sema_up to wake the sleeping threads.
 
-	Our design provided better synchronization because it had a second variable to help controll 
-	when how we wake the threads.  By using ticks_sleep to ensure that timer_sleep blocked the
-	thread,	we guaranteed we didn't accidentally wake up a thread that was blocked by a different 		method.
-
 
 
              PRIORITY SCHEDULING
@@ -124,12 +120,8 @@ struct thread
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
-When we get the next thread to run we get the heighest priority one.
-
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
-
-
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.

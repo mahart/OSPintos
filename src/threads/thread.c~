@@ -378,13 +378,12 @@ int get_max_priority(struct thread *t)
 {
   int max = t -> priority;
   struct list_elem *e;
-   struct thread *tt;
   int temp = 0;
   int count = 0;
   for (e = list_begin (&t->donatedThreadsList); e != list_end (&t->donatedThreadsList);
        e = list_next (e))
   {
-     tt = list_entry (e, struct thread, donated);
+     struct thread *tt = list_entry (e, struct thread, donated);
      temp = get_max_priority(tt);
      if(max < temp)
          max = temp;
