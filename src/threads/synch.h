@@ -41,6 +41,10 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+
+/* Function to donate priority and undonate priority */
+static void donate_priority(struct thread *t1, struct thread *t2);
+static void undonate_priority(struct thread *t);
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

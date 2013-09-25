@@ -93,6 +93,7 @@ struct thread
     struct list_elem elem;              /* List element. */
     struct list_elem donated;     /* threads that donated their priority */
     struct list donatedThreadsList;
+    struct thread* donatedTo;
     //Sleep semaphore
     struct semaphore sema_sleep;
     //sleep ticks
@@ -141,5 +142,6 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
 
 #endif /* threads/thread.h */
