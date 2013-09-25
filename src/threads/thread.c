@@ -218,6 +218,7 @@ thread_create (const char *name, int priority,
   return tid;
 }
 
+
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
 
@@ -357,9 +358,9 @@ thread_set_priority (int new_priority)
   {
 	  if(thread_get_priority()< get_max_priority(t))
 	  {
-	      old_level = intr_disable ();
-	      list_push_front(&thread_current()->donatedThreadsList, &t->donated);
-	      intr_set_level (old_level);
+	     // old_level = intr_disable ();
+	     // list_push_front(&thread_current()->donatedThreadsList, &t->donated);
+	     // intr_set_level (old_level);
 	      thread_yield();
 	      //list_remove(&t->donated);
 	  }
@@ -378,7 +379,7 @@ int get_max_priority(struct thread *t)
 {
   int max = t -> priority;
   struct list_elem *e;
-   struct thread *tt;
+  struct thread *tt;
   int temp = 0;
   int count = 0;
   for (e = list_begin (&t->donatedThreadsList); e != list_end (&t->donatedThreadsList);
@@ -507,8 +508,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->donatedTo = NULL;
   list_init(&t->donatedThreadsList);
   list_push_back (&all_list, &t->allelem);
 }
@@ -535,13 +538,14 @@ static struct thread *
 next_thread_to_run (void) 
 {
   struct thread *t;
+
   if (list_empty (&ready_list))
     return idle_thread;
   else
   {
     struct list_elem *temp = list_max(&ready_list, compare_thread_priority, 0);
     t = list_entry(temp, struct thread, elem);
-	list_remove(temp);
+    list_remove(temp);
     ASSERT (is_thread (t));
     return t;
    // return list_entry(list_pop_front(&ready_list), struct thread, elem);
