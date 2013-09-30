@@ -76,7 +76,9 @@ static bool thread_lower_priority(const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);
 
-void thread_yield_to_higher_priority (void);
+
+
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -180,7 +182,6 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
   enum intr_level old_level;
-
   ASSERT (function != NULL);
 
   /* Allocate thread. */
@@ -216,7 +217,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  thread_yield_to_higher_priority();
   return tid;
 }
 
@@ -352,17 +353,41 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  struct thread *max = list_entry(list_max(&thread_current()->blockedList, thread_lower_priority, NULL)
-	, struct thread, blockedElem);
+  struct thread *max;
+ 
   enum intr_level old_level;
-
-  thread_current ()->basePriority = new_priority;
-  if(max == NULL || new_priority >= max->priority)
-	thread_current()->priority = new_priority;
+  old_level = intr_disable ();
+	//printf("THREAD PRIORITY AT BEGIN %d \n", thread_current()->priority);
+  if(thread_current()->blockedBy==NULL)
+  {
+     thread_current()->priority= new_priority;
+     thread_current()->basePriority = new_priority;
+  }
   else
-	thread_current()->priority = max->priority;
-    
-  thread_yield_to_higher_priority();
+  {
+    if (thread_current()->priority > new_priority)
+    {
+	thread_current()->basePriority = new_priority;
+    }
+    else
+    {
+       thread_current()->priority = new_priority;
+    }
+  }
+
+  if(!list_empty(&thread_current()->blockedList))
+  {
+	max = list_entry(list_max(&thread_current()->blockedList, 
+		thread_lower_priority, NULL), struct thread, blockedElem);
+
+	if(thread_current()->priority  < max->priority)
+		thread_current()->priority = max->priority;
+  }
+	//printf("THREAD PRIORITY AT END %d \n", thread_current()->priority);
+	thread_yield_to_higher_priority();
+  intr_set_level(old_level);
+	
+ 
 }
 
 
@@ -489,12 +514,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-
+  t->basePriority = priority;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->blockedBy = NULL;
   list_init(&t->blockedList);
   list_push_back (&all_list, &t->allelem);
+
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -518,18 +544,19 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  struct thread *t;
+  struct thread *max;
 
   if (list_empty (&ready_list))
-    return idle_thread;
+	return idle_thread;
   else
   {
-    struct list_elem *temp = list_max(&ready_list, thread_lower_priority, 0);
-    t = list_entry(temp, struct thread, elem);
-    list_remove(temp);
-    ASSERT (is_thread (t));
-    return t;
-   // return list_entry(list_pop_front(&ready_list), struct thread, elem);
+    enum intr_level old_level = intr_disable();
+    struct list_elem *maxElem = list_max(&ready_list, thread_lower_priority, 0);
+    max = list_entry(maxElem, struct thread, elem);
+    list_remove(maxElem);
+    ASSERT (is_thread (max));
+    intr_set_level(old_level);
+    return max;
   }
 }
 
@@ -644,6 +671,42 @@ void thread_yield_to_higher_priority (void)
      }
   }
    intr_set_level(old_level);
+}
+
+//Checks to see if t-priority is the highest of the priorities donated to t
+void updatePriority(struct thread* t)
+{
+   struct thread * maxBlocker; 
+
+  if(!list_empty(&t->blockedList))
+  {
+	maxBlocker = list_entry(list_max(&t->blockedList, 
+		thread_lower_priority, NULL), struct thread, blockedElem);
+
+	if(t->priority  < maxBlocker->priority)
+		t->priority = maxBlocker->priority;
+  }
+
+ /* if(!list_empty(&t->blockedList))
+  {
+	maxBlocker = list_entry(list_max(&t->blockedList,
+		thread_lower_priority, NULL), struct thread, blockedElem);
+
+	if(t->priority >= maxBlocker->priority)
+		t-> priority = t->basePriority;
+        else
+		t->priority = maxBlocker->priority;
+  }
+  else
+  {
+ 	 t->priority =  t->basePriority;
+  }*/
+
+  if(t->blockedBy!=NULL && t->blockedBy->status == THREAD_BLOCKED)
+  {
+     t->blockedBy->priority = t->blockedBy->basePriority;
+     updatePriority(t->blockedBy);
+  }
 }
 
 

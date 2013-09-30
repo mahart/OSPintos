@@ -93,6 +93,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem blockedElem;     /* threads that donated their priority */
+    struct list_elem waiterElem;
     struct list blockedList;
     struct thread* blockedBy;
     //Sleep semaphore
@@ -143,6 +144,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+//Checks to see if t-priority is the highest of the priorities donated to t
+void updatePriority(struct thread* t);
 
+void thread_yield_to_higher_priority (void);
 
 #endif /* threads/thread.h */
