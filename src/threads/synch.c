@@ -184,20 +184,20 @@ lock_init (struct lock *lock)
 //donates t1's priority to t2
 static void donate_priority(struct thread *t1, struct thread *t2)
 {
-   t1->donatedTo = t2;
-   list_push_front(&t2->donatedThreadsList, &t1->donated);
+   t1->blockedBy = t2;
+   list_push_front(&t2->blockedList, &t1->blockedElem);
 }
 
 static void remove_donations(struct thread *t)
 {
   struct thread *temp;
   struct list_elem *e;
-  for (e = list_begin (&t->donatedThreadsList); e != list_end (&t ->donatedThreadsList);
+  for (e = list_begin (&t->blockedList); e != list_end (&t ->blockedList);
        e = list_next (e))
     {
-       temp = list_entry (e, struct thread, donated);
-       list_remove(&temp->donated);
-       temp->donatedTo = NULL;
+       temp = list_entry (e, struct thread, blockedElem);
+       list_remove(&temp->blockedElem);
+       temp->blockedBy = NULL;
     } 
 }
 
@@ -223,7 +223,8 @@ lock_acquire (struct lock *lock)
 
   lholder = lock->holder;
   current = thread_current();
-  if(lholder != NULL && get_max_priority(lholder) < get_max_priority(current))
+
+  if(lholder != NULL && lholder->priority < current->priority)
   {
      donate_priority(current, lholder);
   }
