@@ -6,7 +6,7 @@ CIS 520 - Programming Project #1
 
 Austin Murphy <Borzen@k-state.edu>
 Matt Hart <mshart@k-state.edu>
-...
+
 
 ---- PRELIMINARIES ----
 
