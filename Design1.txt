@@ -5,8 +5,8 @@ CIS 520 - Programming Project #1
 
 
 Austin Murphy <Borzen@k-state.edu>
-FirstName LastName <email@k-state.edu>
-...
+Matt Hart <mshart@k-state.edu>
+
 
 ---- PRELIMINARIES ----
 
@@ -124,7 +124,8 @@ struct thread
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
-When we get the next thread to run we get the heighest priority one.
+To ensure that the highest priority thread is waking up first is we grab the highest priority one. 
+To do this we add up their set priority and any donated priority a process might have and set that one as the next one to run.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
@@ -140,10 +141,18 @@ When we get the next thread to run we get the heighest priority one.
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
+A race condition that could occour is that multiple threads are chaging their priority and then yealding. 
+Our implementation avoids this as we put a lock around the yealing functions. 
+A lock could help out as it keeps the thread from changing its priority.
+
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+We chose this option as we would not have to re-sort a list or re-set a priority of a thread.
+
+Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
 
 
               ADVANCED SCHEDULER [EXTRA CREDIT]
