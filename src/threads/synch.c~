@@ -119,9 +119,7 @@ sema_up (struct semaphore *sema)
     maxElem = list_max(&sema->waiters, thread_lower_priority, NULL);
     max = list_entry(maxElem,struct thread, elem);
     list_remove(maxElem);
-    thread_unblock (max);
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+    thread_unblock (max); 
   }
   sema->value++;
   intr_set_level (old_level);
@@ -209,12 +207,17 @@ void remove_donations(struct thread *t)
   struct list_elem *e;
    enum intr_level old_level;
    old_level = intr_disable ();
-  while(!list_empty(&t->blockedList))
+  temp = t->blockedBy;
+  t->blockedBy = NULL;
+  list_remove(&t->blockedElem);
+  /*while(!list_empty(&t->blockedList))
   {
        temp = list_entry (list_pop_front(&t->blockedList), struct thread, blockedElem);
        temp->blockedBy = NULL;
-  } 
+  } */
+
   updatePriority(t);
+  updatePriority(temp);
   thread_yield_to_higher_priority();
   intr_set_level (old_level);
 }
@@ -222,7 +225,7 @@ void remove_donations(struct thread *t)
 void remove_donation(struct thread *t)
 {
   enum intr_level old_level;
-   old_level = intr_disable ();
+  old_level = intr_disable ();
 
   struct thread * blocker = t->blockedBy;
   list_remove(&t->blockedElem);
@@ -246,6 +249,7 @@ lock_acquire (struct lock *lock)
   struct thread* lholder;
   struct thread* current;
   enum intr_level old_level;
+
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
@@ -262,14 +266,10 @@ lock_acquire (struct lock *lock)
   }
 
   
-
-  
-
   sema_down (&lock->semaphore);
-  current->blockedBy = NULL;
   lock->holder = current; 
-  
   intr_set_level (old_level);
+  
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -302,6 +302,9 @@ lock_release (struct lock *lock)
 {
   enum intr_level old_level;
   struct thread* current;
+  struct thread *max;
+  struct thread *nextMax;
+  struct list_elem *maxElem;
   old_level = intr_disable ();
   current = thread_current ();
   
@@ -309,11 +312,22 @@ lock_release (struct lock *lock)
   //printf("Current thread %s, lock holder thread %s\n",current->name, lock->holder->name);
   ASSERT (lock_held_by_current_thread (lock));
 
-  while(!list_empty(&lock->waiters))
+  if(!list_empty(&lock->waiters))
   {
-    struct thread* temp = list_entry(list_pop_front(&lock->waiters),
+    maxElem = list_max(&lock->waiters, thread_lower_priority, NULL);
+    max = list_entry(maxElem,struct thread, waiterElem);
+    list_remove(maxElem);
+    remove_donation(max);
+
+    if(!list_empty(&lock->waiters))
+    {
+	maxElem = list_max(&lock->waiters, thread_lower_priority, NULL);
+        nextMax = list_entry(maxElem,struct thread, waiterElem);
+	donate_priority(nextMax,max);
+    }
+    /*struct thread* temp = list_entry(list_pop_front(&lock->waiters),
 	struct thread, waiterElem);
-     remove_donation(temp);
+     remove_donation(temp);*/
   }
   
   lock->holder = NULL;
