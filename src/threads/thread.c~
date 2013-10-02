@@ -72,10 +72,10 @@ static tid_t allocate_tid (void);
 
 //Used as a list_less_function to get the max priority from the ready list
 // Returns true if thread a has a lower priority than list b
-static bool thread_lower_priority(const struct list_elem *a,
+/*static bool thread_lower_priority(const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);
-
+*/
 
 
 
