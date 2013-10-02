@@ -93,7 +93,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem blockedElem;     /* threads that donated their priority */
-    struct list locks;
+    struct list_elem waiterElem;
     struct list blockedList;
     struct thread* blockedBy;
     //Sleep semaphore
