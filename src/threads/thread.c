@@ -669,7 +669,7 @@ void thread_yield_to_higher_priority (void)
 void updatePriority(struct thread* t)
 {
    struct thread * maxBlocker; 
-
+   t->priority = t->basePriority;
   if(!list_empty(&t->blockedList))
   {
 	maxBlocker = list_entry(list_max(&t->blockedList, 
@@ -694,7 +694,7 @@ void updatePriority(struct thread* t)
  	 t->priority =  t->basePriority;
   }*/
 
-  if(t->blockedBy!=NULL && t->blockedBy->status == THREAD_BLOCKED)
+  if(t->blockedBy!=NULL)
   {
      t->blockedBy->priority = t->blockedBy->basePriority;
      updatePriority(t->blockedBy);
