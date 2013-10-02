@@ -29,7 +29,11 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
+<<<<<<< HEAD
+
+=======
 static void wake_sleeping_threads(struct thread *t, void *aux);
+>>>>>>> 2bba099be6596cacf26fdcafa3df143ddb5b1c13
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -89,6 +93,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+<<<<<<< HEAD
+  
+  int64_t start = timer_ticks ();
+  struct semaphone s;
+  sema_init(&s, start);
+  ASSERT (intr_get_level () == INTR_ON);
+  sema_try_down(&s);
+  //while (timer_elapsed (start) < ticks) 
+    //thread_yield ();
+=======
   //if the number of ticks are invalid, return.
   //Cannot set ticks to 0. If ticks == 0, then 
   // wake_sleeping_threads() will never wake the thread
@@ -104,6 +118,7 @@ timer_sleep (int64_t ticks)
   intr_set_level (old_level);
   sema_down(&thread_current()->sema_sleep); 
 
+>>>>>>> 2bba099be6596cacf26fdcafa3df143ddb5b1c13
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -175,15 +190,22 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
+<<<<<<< HEAD
+
+=======
 
+>>>>>>> 2bba099be6596cacf26fdcafa3df143ddb5b1c13
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+<<<<<<< HEAD
+=======
 
   thread_foreach(wake_sleeping_threads,NULL);
+>>>>>>> 2bba099be6596cacf26fdcafa3df143ddb5b1c13
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -256,6 +278,8 @@ real_time_delay (int64_t num, int32_t denom)
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
 }
+<<<<<<< HEAD
+=======
 
 /* Wakes a sleeping thread if enough ticks have passed*/
 static void wake_sleeping_threads(struct thread *t, void *aux)
@@ -272,3 +296,4 @@ static void wake_sleeping_threads(struct thread *t, void *aux)
      }
    }
 }
+>>>>>>> 2bba099be6596cacf26fdcafa3df143ddb5b1c13

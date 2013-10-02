@@ -152,7 +152,8 @@ A lock could help out as it keeps the thread from changing its priority.
 
 We chose this option as we would not have to re-sort a list or re-set a priority of a thread.
 
-Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
+Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. 
+The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
 
 
               ADVANCED SCHEDULER [EXTRA CREDIT]
