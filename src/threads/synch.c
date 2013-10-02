@@ -109,13 +109,18 @@ void
 sema_up (struct semaphore *sema) 
 {
   enum intr_level old_level;
-
+  struct thread *max;
+  struct list_elem *maxElem;
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  {
+    maxElem = list_max(&sema->waiters, thread_lower_priority, NULL);
+    max = list_entry(maxElem,struct thread, elem);
+    list_remove(maxElem);
+    thread_unblock (max);
+  }
   sema->value++;
   intr_set_level (old_level);
 }
