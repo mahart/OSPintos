@@ -694,7 +694,7 @@ void updatePriority(struct thread* t)
  	 t->priority =  t->basePriority;
   }*/
 
-  if(t->blockedBy!=NULL && t->blockedBy->status == THREAD_BLOCKED)
+  if(t->blockedBy!=NULL)
   {
      t->blockedBy->priority = t->blockedBy->basePriority;
      updatePriority(t->blockedBy);
