@@ -296,7 +296,7 @@ lock_release (struct lock *lock)
   struct thread* current;
   struct thread *max;
   struct thread *nextMax;
-  struct list_elem *maxElem;
+  struct list_elem *maxElem, *e;
   old_level = intr_disable ();
   current = thread_current ();
   
@@ -308,20 +308,24 @@ lock_release (struct lock *lock)
     maxElem = list_max(&lock->waiters, thread_lower_priority, NULL);
     max = list_entry(maxElem,struct thread, waiterElem);
     list_remove(maxElem);
-    remove_donation(max);
+    if(max->blockedBy!=NULL)
+	remove_donation(max);
+
 
     if(!list_empty(&lock->waiters))
     {
-	maxElem = list_max(&lock->waiters, thread_lower_priority, NULL);
-        nextMax = list_entry(maxElem,struct thread, waiterElem);
-	donate_priority(nextMax,max);
+       for (e = list_begin (&lock->waiters); e != list_end (&lock->waiters);
+       e = list_next (e))
+       {
+         struct thread *t = list_entry (e, struct thread, waiterElem);
+         donate_priority(t,max);
+       }
     }
-    lock->holder = max;
+	
   }
-  else
-  {
+
     lock->holder = NULL;
-  }
+
 
   updatePriority(current);
   
