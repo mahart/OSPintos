@@ -94,7 +94,7 @@ struct thread
     struct list_elem elem;              /* List element. */
     struct list_elem blockedElem;     /* threads that donated their priority */
     struct list_elem waiterElem;
-    struct list blockedList;
+    struct list blockedList;		/*list of elements blocked by this thread*/
     struct thread* blockedBy;
     //Sleep semaphore
     struct semaphore sema_sleep;
@@ -148,5 +148,13 @@ int thread_get_load_avg (void);
 void updatePriority(struct thread* t);
 
 void thread_yield_to_higher_priority (void);
+static bool thread_lower_priority(const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux)
+{
+  struct thread* threadA = list_entry (a, struct thread, elem);
+  struct thread* threadB = list_entry (b, struct thread, elem);
 
+  return threadA->priority < threadB->priority;
+}
 #endif /* threads/thread.h */

@@ -250,6 +250,10 @@ lock_acquire (struct lock *lock)
      donate_priority(current, lholder);
      list_push_front(&lock->waiters, &current->waiterElem);
   }
+  else if(lholder!=NULL)
+  {
+ 	list_push_front(&lock->waiters, &current->waiterElem);
+  }
 
   
   sema_down (&lock->semaphore);

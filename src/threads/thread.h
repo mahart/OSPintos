@@ -93,9 +93,9 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem blockedElem;     /* threads that donated their priority */
-    struct list_elem waiterElem;
-    struct list blockedList;
-    struct thread* blockedBy;
+    struct list_elem waiterElem; 	/* element used to store in wait list */
+    struct list blockedList;		/*list of elements blocked by this thread*/
+    struct thread* blockedBy;		/* pointer to the thread currently blocking this thread*/
     //Sleep semaphore
     struct semaphore sema_sleep;
     //sleep ticks

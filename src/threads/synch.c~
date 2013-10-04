@@ -250,6 +250,10 @@ lock_acquire (struct lock *lock)
      donate_priority(current, lholder);
      list_push_front(&lock->waiters, &current->waiterElem);
   }
+  else if(lholder!=NULL)
+ {
+ 	list_push_front(&lock->waiters, &current->waiterElem);
+ }
 
   
   sema_down (&lock->semaphore);
@@ -293,7 +297,6 @@ lock_release (struct lock *lock)
   struct thread *max;
   struct thread *nextMax;
   struct list_elem *maxElem;
-  struct list_elem *e;
   old_level = intr_disable ();
   current = thread_current ();
   
@@ -314,13 +317,6 @@ lock_release (struct lock *lock)
 	donate_priority(nextMax,max);
     }
 
-
-    for (e = list_begin (&lock->waiters); e != list_end (&lock->waiters);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, waiterElem);
-      donate_priority(t,max);
-    }
     /*struct thread* temp = list_entry(list_pop_front(&lock->waiters),
 	struct thread, waiterElem);
      remove_donation(temp);*/

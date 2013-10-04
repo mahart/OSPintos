@@ -115,21 +115,63 @@ struct thread
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+	struct thread
+	  {
+	    /* Owned by thread.c. */
+	    tid_t tid;                          /* Thread identifier. */
+	    enum thread_status status;          /* Thread state. */
+	    char name[16];                      /* Name (for debugging purposes). */
+	    uint8_t *stack;                     /* Saved stack pointer. */
+	    int priority;                       /* Priority. */
+	    int basePriority;
+	    struct list_elem allelem;           /* List element for all threads list. */
+	    /* Shared between thread.c and synch.c. */
+	    struct list_elem elem;              /* List element. */
+	    struct list_elem blockedElem;     /* threads that donated their priority */
+	    struct list_elem waiterElem;	/* element used to store in wait list */
+	    struct list blockedList;	        /*list of elements blocked by this thread*/
+	    struct thread* blockedBy;
+	    //Sleep semaphore
+	    struct semaphore sema_sleep;
+	    //sleep ticks
+	    int64_t ticks_sleep;
+	#ifdef USERPROG
+	    /* Owned by userprog/process.c. */
+	    uint32_t *pagedir;                  /* Page directory. */
+	#endif
+
+	    /* Owned by thread.c. */
+	    unsigned magic;                     /* Detects stack overflow. */
+	  };
+
+	struct lock 
+	  {
+	    struct thread *holder;      /* Thread holding lock (for debugging). */
+	    struct semaphore semaphore; /* Binary semaphore controlling access. */
+	    struct list waiters;
+	  };
+
 
 >> B2: Explain the data structure used to track priority donation.
+	For struct thread, We used a list to store the threads blocked by the current thread. This allows us to
+	calculate the priority using recursive donations.
+	We added a waiter element for the waiters list in the struct lock.
 
+	To struct lock, we added a list to store the threads waiting on this lock.  This allows us to pass the waiters
+	from one thread to the thread with the next highest priority in waiters.
 
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
-To ensure that the highest priority thread is waking up first is we grab the highest priority one. 
-To do this we add up their set priority and any donated priority a process might have and set that one as the next one to run.
+To ensure that the highest priority thread is the next thread to run, wake up, or unblock, we use function that gets the thread with the highest priority, remove it from the list in the lock/semaphore, and unblock the thread. We use this "get max" function in sema_up, lock_release, and next_thread_to_run.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
 
+First we follow the ASSERTS from the original source code, then we make sure interrupts are disabled. Next we get the current thread and the thread that holds the lock.  We then check if the lock holder is not null and check if the holder's priority is less than the current thread's priority. If these statements are true, we donate the current 
+thread's priority to the lock holder's priority and add the current thread to the list of waiters on the lock.
 
 
 >> B5: Describe the sequence of events when lock_release() is called
@@ -152,7 +194,8 @@ A lock could help out as it keeps the thread from changing its priority.
 
 We chose this option as we would not have to re-sort a list or re-set a priority of a thread.
 
-Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
+Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. 
+The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
 
 
               ADVANCED SCHEDULER [EXTRA CREDIT]
