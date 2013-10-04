@@ -172,10 +172,14 @@ To ensure that the highest priority thread is the next thread to run, wake up, o
 
 First we follow the ASSERTS from the original source code, then we make sure interrupts are disabled. Next we get the current thread and the thread that holds the lock.  We then check if the lock holder is not null and check if the holder's priority is less than the current thread's priority. If these statements are true, we donate the current 
 thread's priority to the lock holder's priority and add the current thread to the list of waiters on the lock.
+Else if there is simply a lock holder, we add the thread to the list of waiters. Else, we call sema_down on the locks semaphore and, once the thread resumes, we set the lock holder = to the current thread and resest interrupts.
 
+Nested donation is handled through a donate method. This method set the donating thread's blockedBy pointer to the thread it is donating to. We then add the donating thread's blockedElem to the recieving threads blockedList, we then call updatePriority on the recieving thread. UpdatePriority(thread x) sets x's priority to its base priority and then finds the thread in x's blockedList with the highest priority, if there are any threads in the list, and if the list maximum priority is greater than x's current priority, it sets x's priority to this new max. Next, if x has a blockedBy thread, UpdatePriority() recursively calls itself for the blockedBy thread.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+
+When lock_release() is called on a lock that a higher-priority thread is waiting for, we get the thread with the highest priority from the lock's waiters list, called max. We then add all the threads in the waiting list to max's blockedList and update max's priority. We then set lock->holder = max and call sema_up on the locks semaphore.
 
 ---- SYNCHRONIZATION ----
 
@@ -183,21 +187,18 @@ thread's priority to the lock holder's priority and add the current thread to th
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
-A race condition that could occour is that multiple threads are chaging their priority and then yealding. 
-Our implementation avoids this as we put a lock around the yealing functions. 
-A lock could help out as it keeps the thread from changing its priority.
+A race condition could occur if thread_set_priority() was called multiple times for a single thread, or if thread_set_priority() was called on a thread that has donated its priority to hte current thread. Our implementation avoids these conditions by disabling interrupts for any function that directly modifies a thread's priority. We could use a semaphore to limit these functions to one acess at a time. The semaphore method would be more efficient since disabling interrupts disables ALL interrupts and not just the ones affecting the priority modifying functions.  However, the nuclear option we implemented ensures that nothing changes a thread's priority wat the same time as another function.
 
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-We chose this option as we would not have to re-sort a list or re-set a priority of a thread.
-
-Other options we concidered was to re-set the values of each chaged thread every time we need to reset the values. 
-The reason we did not go this way was every time to recall the threads if a priority was chaged would eat up time and then make everything seem slow.
+We choose this design to make changes easy to propogate through multiple blocks and donations.
+Our method of geting the max priority runs in approximately O(n) just as sorting the priorities as we add them to the list would, but since we run our algorithm when we wake up the threads, it should slightly increase thread efficiency. When we run our algorithm, the thread we need is already blocked, so we don't drastically delay any other threads.  If we sorted the elements of each list as we added them, we would delay blocking the thread, and therefore block delay any thread waiting on the current thread's resources.
 
 
+We choose to use the multiple lists to allow for easy access to all threads waiting or blocked by a thread so we can easily propogate changes.  Without the lists we would have trouble keeping track of multiple waiters and blockers.
               ADVANCED SCHEDULER [EXTRA CREDIT]
               =================================
 

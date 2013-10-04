@@ -316,16 +316,14 @@ lock_release (struct lock *lock)
         nextMax = list_entry(maxElem,struct thread, waiterElem);
 	donate_priority(nextMax,max);
     }
-
-    /*struct thread* temp = list_entry(list_pop_front(&lock->waiters),
-	struct thread, waiterElem);
-     remove_donation(temp);*/
+    lock->holder = max;
+  }
+  else
+  {
+    lock->holder = NULL;
   }
 
-
   updatePriority(current);
-  lock->holder = NULL;
-  
   
   sema_up (&lock->semaphore);
   intr_set_level (old_level);
