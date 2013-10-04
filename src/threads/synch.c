@@ -312,10 +312,6 @@ lock_release (struct lock *lock)
         nextMax = list_entry(maxElem,struct thread, waiterElem);
 	donate_priority(nextMax,max);
     }
-
-    /*struct thread* temp = list_entry(list_pop_front(&lock->waiters),
-	struct thread, waiterElem);
-     remove_donation(temp);*/
   }
 
 

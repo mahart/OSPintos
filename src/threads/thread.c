@@ -72,10 +72,6 @@ static tid_t allocate_tid (void);
 
 //Used as a list_less_function to get the max priority from the ready list
 // Returns true if thread a has a lower priority than list b
-/*static bool thread_lower_priority(const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux);
-*/
 
 
 
@@ -357,7 +353,6 @@ thread_set_priority (int new_priority)
  
   enum intr_level old_level;
   old_level = intr_disable ();
-	//printf("THREAD PRIORITY AT BEGIN %d \n", thread_current()->priority);
   if(thread_current()->blockedBy==NULL)
   {
      thread_current()->priority= new_priority;
@@ -383,7 +378,6 @@ thread_set_priority (int new_priority)
 	if(thread_current()->priority  < max->priority)
 		thread_current()->priority = max->priority;
   }
-	//printf("THREAD PRIORITY AT END %d \n", thread_current()->priority);
 	thread_yield_to_higher_priority();
   intr_set_level(old_level);
 	
@@ -678,21 +672,6 @@ void updatePriority(struct thread* t)
 	if(t->priority  < maxBlocker->priority)
 		t->priority = maxBlocker->priority;
   }
-
- /* if(!list_empty(&t->blockedList))
-  {
-	maxBlocker = list_entry(list_max(&t->blockedList,
-		thread_lower_priority, NULL), struct thread, blockedElem);
-
-	if(t->priority >= maxBlocker->priority)
-		t-> priority = t->basePriority;
-        else
-		t->priority = maxBlocker->priority;
-  }
-  else
-  {
- 	 t->priority =  t->basePriority;
-  }*/
 
   if(t->blockedBy!=NULL)
   {
