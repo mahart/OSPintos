@@ -29,7 +29,7 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
-static void wake_sleeping_threads(struct thread *t, void *aux);
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -89,21 +89,11 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  //if the number of ticks are invalid, return.
-  //Cannot set ticks to 0. If ticks == 0, then 
-  // wake_sleeping_threads() will never wake the thread
-  enum intr_level old_level;
-  if (ticks<=0)
-	return;
+  int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  
-  sema_init(&thread_current()->sema_sleep,0);
-  old_level = intr_disable ();
-  thread_current()->ticks_sleep = ticks;
-  intr_set_level (old_level);
-  sema_down(&thread_current()->sema_sleep); 
-
+  while (timer_elapsed (start) < ticks) 
+    thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -175,15 +165,13 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-
-  thread_foreach(wake_sleeping_threads,NULL);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -255,20 +243,4 @@ real_time_delay (int64_t num, int32_t denom)
      the possibility of overflow. */
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
-}
-
-/* Wakes a sleeping thread if enough ticks have passed*/
-static void wake_sleeping_threads(struct thread *t, void *aux)
-{
-  enum intr_level old_level;
-  if (t->status == THREAD_BLOCKED && t->ticks_sleep>0)
-  {
-     old_level = intr_disable ();
-     t->ticks_sleep = t->ticks_sleep - 1;
-     intr_set_level (old_level);
-     if(t->ticks_sleep==0)
-     {
-        sema_up(&t->sema_sleep);
-     }
-   }
 }

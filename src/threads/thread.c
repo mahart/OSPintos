@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -27,6 +28,7 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -37,12 +39,12 @@ static struct thread *initial_thread;
 static struct lock tid_lock;
 
 /* Stack frame for kernel_thread(). */
-struct kernel_thread_frame 
-  {
+struct kernel_thread_frame
+{
     void *eip;                  /* Return address. */
     thread_func *function;      /* Function to call. */
     void *aux;                  /* Auxiliary data for function. */
-  };
+};
 
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
@@ -70,12 +72,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-//Used as a list_less_function to get the max priority from the ready list
-// Returns true if thread a has a lower priority than list b
-
-
-
-
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -90,14 +86,13 @@ static tid_t allocate_tid (void);
    It is not safe to call thread_current() until this function
    finishes. */
 void
-thread_init (void) 
+thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -109,7 +104,7 @@ thread_init (void)
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
-thread_start (void) 
+thread_start (void)
 {
   /* Create the idle thread. */
   struct semaphore idle_started;
@@ -178,6 +173,7 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
   enum intr_level old_level;
+
   ASSERT (function != NULL);
 
   /* Allocate thread. */
@@ -213,10 +209,9 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-  thread_yield_to_higher_priority();
+
   return tid;
 }
-
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
@@ -299,7 +294,8 @@ thread_exit (void)
 #ifdef USERPROG
   process_exit ();
 #endif
-
+  syscall_exit ();
+  
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
@@ -349,50 +345,15 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  struct thread *max;
- 
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  if(thread_current()->blockedBy==NULL)
-  {
-     thread_current()->priority= new_priority;
-     thread_current()->basePriority = new_priority;
-  }
-  else
-  {
-    if (thread_current()->priority > new_priority)
-    {
-	thread_current()->basePriority = new_priority;
-    }
-    else
-    {
-       thread_current()->priority = new_priority;
-    }
-  }
-
-  if(!list_empty(&thread_current()->blockedList))
-  {
-	max = list_entry(list_max(&thread_current()->blockedList, 
-		thread_lower_priority, NULL), struct thread, blockedElem);
-
-	if(thread_current()->priority  < max->priority)
-		thread_current()->priority = max->priority;
-  }
-	thread_yield_to_higher_priority();
-  intr_set_level(old_level);
-	
- 
+  thread_current ()->priority = new_priority;
 }
-
-
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  return thread_current()->priority;
+  return thread_current ()->priority;
 }
-
 
 /* Sets the current thread's nice value to NICE. */
 void
@@ -508,13 +469,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->basePriority = priority;
   t->priority = priority;
+  list_init (&t->children);
+  t->wait_status = NULL;
+  list_init (&t->fds);
+  t->next_handle = 2;
   t->magic = THREAD_MAGIC;
-  t->blockedBy = NULL;
-  list_init(&t->blockedList);
   list_push_back (&all_list, &t->allelem);
-
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -538,20 +499,10 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  struct thread *max;
-
   if (list_empty (&ready_list))
-	return idle_thread;
+    return idle_thread;
   else
-  {
-    enum intr_level old_level = intr_disable();
-    struct list_elem *maxElem = list_max(&ready_list, thread_lower_priority, NULL);
-    max = list_entry(maxElem, struct thread, elem);
-    list_remove(maxElem);
-    ASSERT (is_thread (max));
-    intr_set_level(old_level);
-    return max;
-  }
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -636,49 +587,6 @@ allocate_tid (void)
 
   return tid;
 }
-
-
-
-void thread_yield_to_higher_priority (void)
-{
-  enum intr_level old_level = intr_disable();
-  if(!list_empty(&ready_list))
-  {
-     struct thread *cur = thread_current();
-     struct thread *max = list_entry(list_max(&ready_list, thread_lower_priority, NULL),
-		struct thread, elem);
-
-     if(max->priority > cur-> priority)
-     {
-          if(intr_context())
-             intr_yield_on_return ();
-          else
-	     thread_yield();
-     }
-  }
-   intr_set_level(old_level);
-}
-
-//Checks to see if t-priority is the highest of the priorities donated to t
-void updatePriority(struct thread* t)
-{
-   struct thread * maxBlocker; 
-   t->priority = t->basePriority;
-  if(!list_empty(&t->blockedList))
-  {
-	maxBlocker = list_entry(list_max(&t->blockedList, 
-		thread_lower_priority, NULL), struct thread, blockedElem);
-
-	if(t->priority  < maxBlocker->priority)
-		t->priority = maxBlocker->priority;
-  }
-
-  if(t->blockedBy!=NULL)
-  {
-     updatePriority(t->blockedBy);
-  }
-}
-
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
