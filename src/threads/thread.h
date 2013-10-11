@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -88,25 +89,42 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int basePriority;
     struct list_elem allelem;           /* List element for all threads list. */
+
+    /* Owned by process.c. */
+    struct wait_status *wait_status;    /* This process's completion status. */
+    struct list children;               /* Completion status of children. */
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct list_elem blockedElem;     /* threads that donated their priority */
-    struct list_elem waiterElem; 	/* element used to store in wait list */
-    struct list blockedList;		/*list of elements blocked by this thread*/
-    struct thread* blockedBy;		/* pointer to the thread currently blocking this thread*/
-    //Sleep semaphore
-    struct semaphore sema_sleep;
-    //sleep ticks
-    int64_t ticks_sleep;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
+    struct file *bin_file;              /* Executable. */
+
+    /* Owned by syscall.c. */
+    struct list fds;                    /* List of file descriptors. */
+    int next_handle;                    /* Next handle value. */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+/* Tracks the completion of a process.
+   Reference held by both the parent, in its `children' list,
+   and by the child, in its `wait_status' pointer. */
+struct wait_status
+  {
+    struct list_elem elem;              /* `children' list element. */
+    struct lock lock;                   /* Protects ref_cnt. */
+    int ref_cnt;                        /* 2=child and parent both alive,
+                                           1=either child or parent alive,
+                                           0=child and parent both dead. */
+    tid_t tid;                          /* Child thread id. */
+    int exit_code;                      /* Child exit code, if dead. */
+    struct semaphore dead;              /* 0=child alive, 1=child dead. */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -144,17 +162,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-//Checks to see if t-priority is the highest of the priorities donated to t
-void updatePriority(struct thread* t);
 
-void thread_yield_to_higher_priority (void);
-static bool thread_lower_priority(const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux)
-{
-  struct thread* threadA = list_entry (a, struct thread, elem);
-  struct thread* threadB = list_entry (b, struct thread, elem);
-
-  return threadA->priority < threadB->priority;
-}
 #endif /* threads/thread.h */
