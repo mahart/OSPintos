@@ -47,8 +47,42 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED)
 {
-  printf ("system call!\n");
-  thread_exit ();
+  typedef int syscall_function (int,int,int);
+  struct syscall
+  {
+    size_t arg_cnt;
+    syscall_function *func;
+  };
+
+  static const struct syscall syscall_table[] =
+  {
+    {0,(syscall_function *) sys_halt},
+    {1,(syscall_function *) sys_exit},
+    {1,(syscall_function *) sys_exec},
+    {1,(syscall_function *) sys_wait},
+    {2,(syscall_function *) sys_create},
+    {1,(syscall_function *) sys_remove},
+    {1,(syscall_function *) sys_open},
+    {1,(syscall_function *) sys_filesize},
+    {3,(syscall_function *) sys_read},
+    {3,(syscall_function *) sys_write},
+    {2,(syscall_function *) sys_seek},
+    {1,(syscall_function *) sys_tell},
+    {1,(syscall_function *) sys_close}
+  };
+
+  const struct syscall *sc;
+  unsigned call_nr;
+  int args[3];
+  copy_in(&call_nr, f->esp,sizeof call_nr);
+  if(call_nr >= sizeof syscall_table/sizeof *syscall_table)
+    thread_exit();
+  sc = syscall_table+call_nr;
+  ASSERT(sc->arg_cnt <= sizeof args/sizeof *args);
+  memset(args, 0, sizeof args);
+  copy_in(args, (uint32_t *) f->esp+1, sizeof *args * sc->arg_cnt);
+
+  f->eax = sc->func (args[0],args[1],args[2]);
 }
 
 /* Returns true if UADDR is a valid, mapped user address,
@@ -185,6 +219,7 @@ struct file_descriptor
 static int
 sys_open (const char *ufile) 
 {
+  printf("Got to the start\n");
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   int handle = -1;
@@ -204,7 +239,7 @@ sys_open (const char *ufile)
         free (fd);
       lock_release (&fs_lock);
     }
-  
+  printf("Got to the end\n Handle = %d\n", handle);
   palloc_free_page (kfile);
   return handle;
 }
