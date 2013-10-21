@@ -181,8 +181,13 @@ sys_exit (int exit_code)
 static int
 sys_exec (const char *ufile) 
 {
-/* Add code */
-  thread_exit ();
+  int result;
+  if(!is_user_vaddr(ufile))
+     return -1;
+  lock_acquire(&fs_lock);
+  result = process_execute(ufile);
+  lock_release(&fs_lock);
+  return result;
 }
  
 /* Wait system call. */
@@ -219,7 +224,6 @@ struct file_descriptor
 static int
 sys_open (const char *ufile) 
 {
-  printf("Got to the start\n");
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   int handle = -1;
@@ -239,7 +243,6 @@ sys_open (const char *ufile)
         free (fd);
       lock_release (&fs_lock);
     }
-  printf("Got to the end\n Handle = %d\n", handle);
   palloc_free_page (kfile);
   return handle;
 }
