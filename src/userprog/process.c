@@ -159,7 +159,7 @@ process_exit (void)
       struct wait_status *cs = cur->wait_status;
 
       /* add code */
-      printf ("%s: exit(0)\n", cur->name); // HACK all successful ;-)
+      printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
 
       release_child (cs);
     }
@@ -595,16 +595,10 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
   /* Reverse the order of the command line arguments. */
   argv = (char **) (upage + ofs);
 
-  for(i=0;i<argc; i++)
-  {
-	printf("argv[%d]=%s\n",i,argv[i]);
-  }
+
   reverse (argc, (char **) (kpage + ofs));
 
-  for(i=0;i<argc; i++)
-  {
-	printf("rev[%d]=%s\n",i,argv[i]);
-  }
+
   /* Push argv, argc, "return address". */
   if (push (kpage, &ofs, &argv, sizeof argv) == NULL
       || push (kpage, &ofs, &argc, sizeof argc) == NULL
