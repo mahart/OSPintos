@@ -9,6 +9,6 @@ check_expected ([<<'EOF']);
 (args) argv[1] = 'onearg'
 (args) argv[2] = null
 (args) end
-args-single: exit(0)
+args-single: exit(0)jm
 EOF
 pass;
