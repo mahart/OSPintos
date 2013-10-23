@@ -514,7 +514,26 @@ static void
 reverse (int argc, char **argv) 
 {
    /* add code */
+	char* holder;
+   	int i;
+	int n = argc-1;
+	/*for(i=0;i<argc; i++)
+	{
+		printf("argv[%d]=%s\n",i,argv[i]);
+	}*/
 
+	for(i=0; i < argc/2;i++)
+	{
+		holder = argv[i];
+		argv[i] = argv[n];
+		argv[n]=holder;
+		n--;
+	}
+
+   	/*for(i=0;i<argc; i++)
+	{
+		printf("Reveresd argv[%d]=%s\n",i,argv[i]);
+	}*/
    return;
 }
 
@@ -551,7 +570,8 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
   char *karg, *saveptr;
   int argc;
   char **argv;
-
+  char **rev;
+ int i;
   /* Push a temporary working copy of the command line string. */
   cmd_line_copy = push (kpage, &ofs, cmd_line, strlen (cmd_line) + 1);
   if (cmd_line_copy == NULL)
@@ -574,7 +594,10 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
 
   /* Reverse the order of the command line arguments. */
   argv = (char **) (upage + ofs);
+
+
   reverse (argc, (char **) (kpage + ofs));
+
 
   /* Push argv, argc, "return address". */
   if (push (kpage, &ofs, &argv, sizeof argv) == NULL
