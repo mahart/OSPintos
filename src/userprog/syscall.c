@@ -255,11 +255,11 @@ lookup_fd (int handle)
 {
 /* Add code to lookup file descriptor in the current thread's fds */
   struct thread *cur = thread_current();
-  struct list_elem *e'
+  struct list_elem *e;
 
-  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e)
+  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
   {
-      struct file_discriptor *fd;
+      struct file_descriptor *fd;
       fd = list_entry (e,struct file_descriptor,elem);
       if(fd->handle == handle)
          return fd;
@@ -272,6 +272,7 @@ static int
 sys_filesize (int handle) 
 {
 /* Add code */
+  struct file_descriptor *fd = lookup_fd(handle);
   thread_exit ();
 }
  
@@ -280,6 +281,8 @@ static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
 /* Add code */
+  struct file_descriptor *fd = lookup_fd(handle);
+  file_read(fd->file,udst_,size);
   thread_exit ();
 }
  
@@ -343,7 +346,8 @@ sys_write (int handle, void *usrc_, unsigned size)
 static int
 sys_seek (int handle, unsigned position) 
 {
-/* Add code */
+  struct file_descriptor *fd = lookup_fd(handle);
+  file_seek(fd->file,position);
   thread_exit ();
 }
  
@@ -351,7 +355,8 @@ sys_seek (int handle, unsigned position)
 static int
 sys_tell (int handle) 
 {
-/* Add code */
+  struct file_descriptor *fd = lookup_fd(handle);
+  file_tell(fd->file);
   thread_exit ();
 }
  
@@ -359,7 +364,8 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
-/* Add code */
+  struct file_descriptor *fd = lookup_fd(handle);
+  file_close(fd->file);
   thread_exit ();
 }
  
@@ -367,6 +373,14 @@ sys_close (int handle)
 void
 syscall_exit (void) 
 {
-/* Add code */
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+  
+  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
+  {
+     struct file_descriptor *fd;
+     fd = list_entry(e, struct file_descriptor, elem);
+     sys_close(fd->handle);
+  }
   return;
 }
