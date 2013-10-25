@@ -244,6 +244,7 @@ sys_open (const char *ufile)
       lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
+  thread_exit();
   return handle;
 }
  
@@ -282,7 +283,9 @@ sys_read (int handle, void *udst_, unsigned size)
 {
 /* Add code */
   struct file_descriptor *fd = lookup_fd(handle);
+  lock_acquire(&fs_lock);
   file_read(fd->file,udst_,size);
+  lock_release(&fs_lock);
   thread_exit ();
 }
  
@@ -347,7 +350,9 @@ static int
 sys_seek (int handle, unsigned position) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+  lock_acquire(&fs_lock);
   file_seek(fd->file,position);
+  lock_release(&fs_lock);
   thread_exit ();
 }
  
@@ -356,7 +361,9 @@ static int
 sys_tell (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+  lock_acquire(&fs_lock);
   file_tell(fd->file);
+  lock_release(&fs_lock);
   thread_exit ();
 }
  
@@ -365,7 +372,11 @@ static int
 sys_close (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+  if(!fd)
+    return -1;
+  lock_acquire(&fs_lock);
   file_close(fd->file);
+  lock_release(&fs_lock);
   thread_exit ();
 }
  
@@ -375,13 +386,17 @@ syscall_exit (void)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
-  
+  printf("I am in the syscall_exit!\n");
+
   for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
   {
      struct file_descriptor *fd;
      fd = list_entry(e, struct file_descriptor, elem);
-     sys_close(fd->handle);
-     list_remove(&fd
+     lock_acquire(&fs_lock);
+     file_close(fd->file);
+     lock_release(&fs_lock);
+     list_remove(e);
+     free(fd);
   }
   return;
 }
