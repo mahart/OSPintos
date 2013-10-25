@@ -184,9 +184,9 @@ sys_exec (const char *ufile)
   int result;
   if(!is_user_vaddr(ufile))
      return -1;
-  lock_acquire(&file_lock);
+  lock_acquire(&fs_lock);
   result = process_execute(ufile);
-  lock_release(&file_lock);
+  lock_release(&fs_lock);
   return result;
 }
  

@@ -254,6 +254,16 @@ static struct file_descriptor *
 lookup_fd (int handle)
 {
 /* Add code to lookup file descriptor in the current thread's fds */
+  struct thread *cur = thread_current();
+  struct list_elem *e'
+
+  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e)
+  {
+      struct file_discriptor *fd;
+      fd = list_entry (e,struct file_descriptor,elem);
+      if(fd->handle == handle)
+         return fd;
+  }
   thread_exit ();
 }
  
