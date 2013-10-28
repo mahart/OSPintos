@@ -202,6 +202,13 @@ sys_wait (tid_t child)
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
+  if(!ufile)
+    return -1;
+  if(!is_user_vaddr(ufile))
+    return -1;
+  lock_acquire (&fs_lock);
+  filesys_create(ufile,initial_size);
+  lock_release(&fs_lock);
   return 0;
 }
  
@@ -209,7 +216,9 @@ sys_create (const char *ufile, unsigned initial_size)
 static int
 sys_remove (const char *ufile) 
 {
-/* Add code */
+  lock_acquire(&fs_lock);
+  filesys_remove(ufile);
+  lock_release(&fs_lock);
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -386,7 +395,6 @@ syscall_exit (void)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
-  printf("I am in the syscall_exit!\n");
 
   for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
   {

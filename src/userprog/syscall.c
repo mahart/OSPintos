@@ -202,6 +202,13 @@ sys_wait (tid_t child)
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
+  if(!ufile)
+    return -1;
+  if(!is_user_vaddr(ufile))
+    return -1;
+  lock_acquire (&fs_lock);
+  filesys_create(ufile,initial_size);
+  lock_release(&fs_lock);
   return 0;
 }
  
@@ -209,7 +216,9 @@ sys_create (const char *ufile, unsigned initial_size)
 static int
 sys_remove (const char *ufile) 
 {
-/* Add code */
+  lock_acquire(&fs_lock);
+  filesys_remove(ufile);
+  lock_release(&fs_lock);
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -274,6 +283,9 @@ sys_filesize (int handle)
 {
 /* Add code */
   struct file_descriptor *fd = lookup_fd(handle);
+  lock_acquire(&fs_lock);
+  file_length(fd->file);
+  lock_release(&fs_lock);
   thread_exit ();
 }
  
