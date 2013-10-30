@@ -195,7 +195,7 @@ static int
 sys_wait (tid_t child) 
 {
 /* Add code */
-  thread_exit ();
+	return process_wait(child);
 }
  
 /* Create system call. */

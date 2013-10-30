@@ -195,6 +195,7 @@ static int
 sys_wait (tid_t child) 
 {
 /* Add code */
+	return process_wait(child);
   thread_exit ();
 }
  
@@ -386,7 +387,6 @@ syscall_exit (void)
 {
   struct thread *cur = thread_current();
   struct list_elem *e;
-  printf("I am in the syscall_exit!\n");
 
   for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
   {

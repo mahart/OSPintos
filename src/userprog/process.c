@@ -139,7 +139,40 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
-  return -1;
+	struct thread *cur = thread_current();
+	struct thread *t;
+	int ret = -1;
+	bool isChild = false;
+	struct list_elem *e;
+	struct wait_status *ws;
+	
+	for(e = list_begin(&cur->children); e!=list_end(&cur->children); e=list_next(e))
+	{
+		ws = list_entry(e, struct wait_status, elem);
+		if(child_tid == t->tid)
+		{
+			isChild=true;
+			break;
+		}
+	}
+
+	if(!ws || !isChild)
+	{
+		//child_tid is not a child of the current_thread().
+		return -1;
+	}
+	
+	//check if already waiting
+	if(cur->wait_status->tid == child_tid)
+	{
+		//cur thread is already waiting on the child
+		return-1;
+	}
+	//wait on child if alive
+	sema_down(&ws->dead);
+	return 0;//ws->exit_code;
+	
+  return ret;
 }
 
 /* Free the current process's resources. */
@@ -159,6 +192,7 @@ process_exit (void)
       struct wait_status *cs = cur->wait_status;
 
       /* add code */
+	sema_up(&cs->dead);
       printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
 
       release_child (cs);
