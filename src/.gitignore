@@ -40,3 +40,9 @@ tags
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# In Progress #
+######################
+*.c~
+*.config~
+*.txt~
