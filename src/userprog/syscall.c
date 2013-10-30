@@ -202,14 +202,20 @@ sys_wait (tid_t child)
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
-  return 0;
+  if(!ufile)
+    return sys_exit(-1);
+  lock_acquire (&fs_lock);
+  filesys_create(ufile,initial_size);
+  lock_release(&fs_lock);
 }
  
 /* Remove system call. */
 static int
 sys_remove (const char *ufile) 
 {
-/* Add code */
+  lock_acquire(&fs_lock);
+  filesys_remove(ufile);
+  lock_release(&fs_lock);
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -227,7 +233,10 @@ sys_open (const char *ufile)
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   int handle = -1;
- 
+  if(!kfile)
+    return -1;
+  if(!is_user_vaddr(kfile))
+    sys_exit(-1);
   fd = malloc (sizeof *fd);
   if (fd != NULL)
     {
@@ -265,28 +274,53 @@ lookup_fd (int handle)
       if(fd->handle == handle)
          return fd;
   }
-  thread_exit ();
 }
  
 /* Filesize system call. */
 static int
 sys_filesize (int handle) 
 {
-/* Add code */
   struct file_descriptor *fd = lookup_fd(handle);
+  off_t length;
+  lock_acquire(&fs_lock);
+  length = file_length(fd->file);
+  lock_release(&fs_lock);
+  free(fd);
   thread_exit ();
+  return length;
 }
  
 /* Read system call. */
 static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
-/* Add code */
   struct file_descriptor *fd = lookup_fd(handle);
+  unsigned i;
+  int ret = -1;
   lock_acquire(&fs_lock);
-  file_read(fd->file,udst_,size);
+  if(handle == STDIN_FILENO){
+    for(i = 0; i != size; i++){
+      *(uint8_t *)(udst_ +i) = input_getc();
+      ret = size;
+    }
+  }
+  else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
+    lock_release(&fs_lock);
+    free(fd);
+    return -1;
+  }
+  else{
+    if(!fd){
+      lock_release(&fs_lock);
+      free(fd);
+      return -1;
+    }
+    ret = file_read(fd->file,udst_,size);
+  }    
   lock_release(&fs_lock);
+  free(fd);
   thread_exit ();
+  return ret;
 }
  
 /* Write system call. */
@@ -350,10 +384,14 @@ static int
 sys_seek (int handle, unsigned position) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+  if(!fd)
+    return -1;
   lock_acquire(&fs_lock);
   file_seek(fd->file,position);
   lock_release(&fs_lock);
+  free(fd);
   thread_exit ();
+  return 0;
 }
  
 /* Tell system call. */
@@ -361,10 +399,14 @@ static int
 sys_tell (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+  if(!fd)
+    return -1;
   lock_acquire(&fs_lock);
   file_tell(fd->file);
   lock_release(&fs_lock);
+  free(fd);
   thread_exit ();
+  return 0;
 }
  
 /* Close system call. */
@@ -377,7 +419,9 @@ sys_close (int handle)
   lock_acquire(&fs_lock);
   file_close(fd->file);
   lock_release(&fs_lock);
+  free(fd);
   thread_exit ();
+  return 0;
 }
  
 /* On thread exit, close all open files. */
