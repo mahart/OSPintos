@@ -9,7 +9,7 @@
 >> Fill in the names of your group members.
 
 Austin Murphy
-FirstName LastName
+Matt Heart
 
 ---- PRELIMINARIES ----
 
@@ -52,14 +52,30 @@ FirstName LastName
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+struct file_descriptor
+  {
+    struct list_elem elem;      /* List element. */
+    struct file *file;          /* File. */
+    int handle;                 /* File handle. */
+  };
+
+A discriptor for a open file in the process. 
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+File Descriptors are associated with open files by having a number assigned to them so you can find them.
+File discriptors are unique within a system process as syscalls are only associated with a proccess. 
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
+For a file read from the kernal it checks the handle to see if it is a file from the kernal.
+Then it reads it in from a buffer for the size and then returns the size read in.
+For a write we use put what we are writing into a buffer and then return the bytes writen.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -85,12 +101,16 @@ FirstName LastName
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+
+
 ---- SYNCHRONIZATION ----
 
 >> B7: The "exec" system call returns -1 if loading the new executable
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
+
+it checks to see if the file is already in the virtual address. Then it is passed back by returning -1. 
 
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -106,6 +126,9 @@ FirstName LastName
 
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
+
+Advantanges to our implematation of file discriptors is that they are easy to lookup but yet complex enough to get the job done. 
+A major disavantage is that they are linked to the process and not the filesystem as a whole.
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
