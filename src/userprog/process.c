@@ -170,7 +170,7 @@ process_wait (tid_t child_tid)
 	}
 	//wait on child if alive
 	sema_down(&ws->dead);
-	return 0;//ws->exit_code;
+	return ws->exit_code;//ws->exit_code;
 	
   return ret;
 }
