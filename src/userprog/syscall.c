@@ -175,6 +175,7 @@ sys_exit (int exit_code)
   thread_current ()->wait_status->exit_code = exit_code;
   thread_exit ();
   NOT_REACHED ();
+	return -1;
 }
  
 /* Exec system call. */
@@ -195,27 +196,35 @@ static int
 sys_wait (tid_t child) 
 {
 /* Add code */
-  thread_exit ();
+	return process_wait(child);
 }
  
 /* Create system call. */
 static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
+  int result;
   if(!ufile)
     return sys_exit(-1);
   lock_acquire (&fs_lock);
-  filesys_create(ufile,initial_size);
+  result = filesys_create(ufile,initial_size);
   lock_release(&fs_lock);
+	return result;
 }
  
 /* Remove system call. */
 static int
 sys_remove (const char *ufile) 
 {
+	int result;
+	if(!ufile)
+		return false;
+	if(!is_user_vaddr(ufile))
+		sys_exit(-1);
   lock_acquire(&fs_lock);
-  filesys_remove(ufile);
+   result =filesys_remove(ufile);
   lock_release(&fs_lock);
+	return result;
 }
  
 /* A file descriptor, for binding a file handle to a file. */
@@ -249,11 +258,14 @@ sys_open (const char *ufile)
           list_push_front (&cur->fds, &fd->elem);
         }
       else 
-        free (fd);
+	{
+        	file_close (fd->file);
+		free(fd);
+	}
       lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
-  thread_exit();
+  //thread_exit();
   return handle;
 }
  
@@ -286,7 +298,7 @@ sys_filesize (int handle)
   length = file_length(fd->file);
   lock_release(&fs_lock);
   free(fd);
-  thread_exit ();
+  //thread_exit ();
   return length;
 }
  
@@ -319,7 +331,7 @@ sys_read (int handle, void *udst_, unsigned size)
   }    
   lock_release(&fs_lock);
   free(fd);
-  thread_exit ();
+ // thread_exit ();
   return ret;
 }
  
@@ -347,7 +359,7 @@ sys_write (int handle, void *usrc_, unsigned size)
       if (!verify_user (usrc)) 
         {
           lock_release (&fs_lock);
-          thread_exit ();
+          sys_exit (-1);
         }
 
       /* Do the write. */
@@ -390,7 +402,7 @@ sys_seek (int handle, unsigned position)
   file_seek(fd->file,position);
   lock_release(&fs_lock);
   free(fd);
-  thread_exit ();
+  //thread_exit ();
   return 0;
 }
  
@@ -405,7 +417,7 @@ sys_tell (int handle)
   file_tell(fd->file);
   lock_release(&fs_lock);
   free(fd);
-  thread_exit ();
+  //thread_exit ();
   return 0;
 }
  
@@ -418,10 +430,11 @@ sys_close (int handle)
     return -1;
   lock_acquire(&fs_lock);
   file_close(fd->file);
+  list_remove(&fd->elem);
   lock_release(&fs_lock);
   free(fd);
   thread_exit ();
-  return 0;
+  return -1;
 }
  
 /* On thread exit, close all open files. */
