@@ -452,8 +452,8 @@ syscall_exit (void)
      lock_acquire(&fs_lock);
      file_close(fd->file);
      lock_release(&fs_lock);
+     list_remove(e);
      free(fd);
   }
   return;
 }
-
