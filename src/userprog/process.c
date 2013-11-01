@@ -187,6 +187,7 @@ process_exit (void)
   file_close (cur->bin_file);
 
   /* Notify parent that we're dead. */
+	 printf ("%s: exit(%d)\n", cur->name, 0);
   if (cur->wait_status != NULL) 
     {
       struct wait_status *cs = cur->wait_status;

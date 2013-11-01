@@ -292,8 +292,10 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+	printf("Calling process_exit\n");
   process_exit ();
 #endif
+	printf("Calling syscall_exit\n");
   syscall_exit ();
   
   /* Remove thread from all threads list, set our status to dying,
