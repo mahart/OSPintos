@@ -81,6 +81,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   ASSERT(sc->arg_cnt <= sizeof args/sizeof *args);
   memset(args, 0, sizeof args);
   copy_in(args, (uint32_t *) f->esp+1, sizeof *args * sc->arg_cnt);
+
   f->eax = sc->func (args[0],args[1],args[2]);
 }
 
@@ -172,8 +173,9 @@ static int
 sys_exit (int exit_code) 
 {
   thread_current ()->wait_status->exit_code = exit_code;
+  thread_exit ();
   NOT_REACHED ();
-  return -1;
+	return -1;
 }
  
 /* Exec system call. */
@@ -207,8 +209,7 @@ sys_create (const char *ufile, unsigned initial_size)
   lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
   lock_release(&fs_lock);
-  printf("Result = %d\n",result);
-  return result;
+	return result;
 }
  
 /* Remove system call. */
@@ -238,10 +239,13 @@ struct file_descriptor
 static int
 sys_open (const char *ufile) 
 {
-char *kfile = copy_in_string (ufile);
+  char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   int handle = -1;
-
+  if(!kfile)
+    return -1;
+  if(!is_user_vaddr(kfile))
+    sys_exit(-1);
   fd = malloc (sizeof *fd);
   if (fd != NULL)
     {
@@ -254,11 +258,15 @@ char *kfile = copy_in_string (ufile);
           list_push_front (&cur->fds, &fd->elem);
         }
       else 
-   	free(fd);
+	{
+        	file_close (fd->file);
+		free(fd);
+		return -1;
+	}
       lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
-  printf("Handle = %d\n",handle);
+  //thread_exit();
   return handle;
 }
  
@@ -291,6 +299,7 @@ sys_filesize (int handle)
   length = file_length(fd->file);
   lock_release(&fs_lock);
   free(fd);
+  //thread_exit ();
   return length;
 }
  
@@ -323,6 +332,7 @@ sys_read (int handle, void *udst_, unsigned size)
   }    
   lock_release(&fs_lock);
   free(fd);
+ // thread_exit ();
   return ret;
 }
  
@@ -393,6 +403,7 @@ sys_seek (int handle, unsigned position)
   file_seek(fd->file,position);
   lock_release(&fs_lock);
   free(fd);
+  //thread_exit ();
   return 0;
 }
  
@@ -407,6 +418,7 @@ sys_tell (int handle)
   file_tell(fd->file);
   lock_release(&fs_lock);
   free(fd);
+  //thread_exit ();
   return 0;
 }
  
@@ -444,3 +456,4 @@ syscall_exit (void)
   }
   return;
 }
+
