@@ -168,7 +168,6 @@ copy_in_string (const char *us)
 static int
 sys_halt (void)
 {
-	printf("CALLING SYS_HALT\n");
   shutdown_power_off ();
 }
  /* A file descriptor, for binding a file handle to a file. */
@@ -185,7 +184,6 @@ sys_exit (int exit_code)
 {
   struct thread* t = thread_current();
   struct file_descriptor *fd;
-  printf("CALLING SYS_EXIT\n");
   while(!list_empty(&t->fds))
   {
 	fd = list_entry(list_begin(&t->fds), struct file_descriptor, elem);
@@ -193,7 +191,6 @@ sys_exit (int exit_code)
   }
   
   t->wait_status->exit_code = exit_code;
-	printf("Calling thread_exit() from sys_exit\n");
   thread_exit ();
   return -1;
 }
@@ -203,7 +200,6 @@ static int
 sys_exec (const char *ufile) 
 {
   int result;
-	printf("CALLING SYS_EXEC\n");
   if(!ufile)/*null pointer*/
   {
 	printf("NULL POINTER IN SYS_EXEC\n");
@@ -224,7 +220,6 @@ sys_exec (const char *ufile)
 static int
 sys_wait (tid_t child) 
 {
-	printf("CALLING SYS_WAIT\n");
 	return process_wait(child);
 }
  
@@ -233,7 +228,6 @@ static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
   int result;
- 	printf("CALLING SYS_CREATE\n");
   if(!ufile)
    {
 	printf("FAILURE IN SYS_CREATE, !ufile\n");
@@ -250,7 +244,6 @@ static int
 sys_remove (const char *ufile) 
 {
 	int result;
-	printf("CALLING SYS_REMOVE\n");
 	if(!ufile)
 	{
 		printf("FAILURE IN SYS_REMOVE,!ufile\n");
@@ -278,7 +271,6 @@ sys_open (const char *ufile)
   struct file* f;
   int handle = -1;
   struct thread *cur = thread_current ();
-	printf("CALLING SYS_OPEN\n");
 
   if(!kfile)
   {
@@ -342,7 +334,6 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
-	printf("CALLING SYS_FILESIZE\n");
   lock_acquire(&fs_lock);
   length = file_length(fd->file);
   lock_release(&fs_lock);
@@ -358,7 +349,6 @@ sys_read (int handle, void *udst_, unsigned size)
   struct file_descriptor *fd = lookup_fd(handle);
   unsigned i;
   int ret = -1;
-	printf("CALLING SYS_READ\n");
   lock_acquire(&fs_lock);
   if(handle == STDIN_FILENO){
     for(i = 0; i != size; i++){
@@ -394,7 +384,6 @@ sys_write (int handle, void *usrc_, unsigned size)
   uint8_t *usrc = usrc_;
   struct file_descriptor *fd = NULL;
   int bytes_written = 0;
-	printf("CALLING SYS_WRITE\n");
   /* Lookup up file descriptor. */
   if (handle != STDOUT_FILENO)
     fd = lookup_fd (handle);
@@ -449,7 +438,6 @@ static int
 sys_seek (int handle, unsigned position) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
-	printf("CALLING SYS_SEEK\n");
   if(!fd)
   {
 	printf("FAILURE IN SYS_SEEK, !fd\n");
@@ -468,7 +456,6 @@ static int
 sys_tell (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
-	printf("CALLING SYS_TELL");
   if(!fd)
   {
 	printf("FAILURE IN SYS_TELL, !fd\n");
@@ -487,7 +474,6 @@ static int
 sys_close (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
-	printf("CALLING SYS_CLOSE\n");
   if(!fd)
   {
 	printf("FAILURE IN SYS_CLOSE, !fd\n");
@@ -505,7 +491,6 @@ sys_close (int handle)
 void
 syscall_exit (void) 
 {
-	printf("CALLING SYSCALL_EXIT\n");
   struct thread *cur = thread_current();
   struct list_elem *e;
 
