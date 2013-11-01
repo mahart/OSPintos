@@ -139,7 +139,7 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
-	struct thread *cur = thread_current();
+    	struct thread *cur = thread_current();
 	struct thread *t;
 	int ret = -1;
 	bool isChild = false;
@@ -171,8 +171,6 @@ process_wait (tid_t child_tid)
 	//wait on child if alive
 	sema_down(&ws->dead);
 	return ws->exit_code;//ws->exit_code;
-	
-  return ret;
 }
 
 /* Free the current process's resources. */
@@ -190,11 +188,10 @@ process_exit (void)
   if (cur->wait_status != NULL) 
     {
       struct wait_status *cs = cur->wait_status;
-
-      /* add code */
-	sema_up(&cs->dead);
-      printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
-
+      
+      
+      sema_up(&cs->dead);
+      printf ("%s: exit(%d)\n", cur->name, cur->wait_status->exit_code); // HACK all successful ;-)
       release_child (cs);
     }
 
