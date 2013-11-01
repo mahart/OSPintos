@@ -596,10 +596,10 @@ reverse (int argc, char **argv)
 	char* holder;
    	int i;
 	int n = argc-1;
-	for(i=0;i<argc; i++)
+	/*for(i=0;i<argc; i++)
 	{
 		printf("argv[%d]=%s\n",i,argv[i]);
-	}
+	}*/
 
 	for(i=0; i < argc/2;i++)
 	{
@@ -609,10 +609,10 @@ reverse (int argc, char **argv)
 		n--;
 	}
 
-   	for(i=0;i<argc; i++)
+   	/*for(i=0;i<argc; i++)
 	{
 		printf("Reveresd argv[%d]=%s\n",i,argv[i]);
-	}
+	}*/
    return;
 }
 
