@@ -261,6 +261,7 @@ sys_open (const char *ufile)
 	{
         	file_close (fd->file);
 		free(fd);
+		return -1;
 	}
       lock_release (&fs_lock);
     }
