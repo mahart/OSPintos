@@ -59,7 +59,10 @@ process_execute (const char *file_name)
       if (exec.success)
         list_push_back (&thread_current ()->children, &exec.wait_status->elem);
       else
-        tid = TID_ERROR;
+	{
+		printf("FAILURE PROCESS EXECUTE, !exec.success\n");
+          	tid = TID_ERROR;
+ 	}
     }
 
   return tid;
@@ -103,7 +106,10 @@ start_process (void *exec_)
   exec->success = success;
   sema_up (&exec->load_done);
   if (!success) 
+  {
+	printf("FAILURE START PROCESS, !sucess\n");
     thread_exit ();
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -139,6 +145,43 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
+
+	struct thread* t;
+	int ret;
+	
+	ret = -1;
+	
+	t=get_thread(child_tid);
+	
+	if(!t)
+	{
+		printf("!T in process_wait\n");
+		return -1;
+	}
+
+	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == RET_STATUS_INVALID)
+	{
+		printf("t->status == THREAD_DYING || t->wait_status->exit_code == -1 in process_wait\n");
+		t->wait_status->exit_code=RET_STATUS_INVALID;
+		return -1;
+	}
+
+	if(t->wait_status->exit_code != RET_STATUS_DEFAULT && t->wait_status->exit_code!=RET_STATUS_INVALID)
+	{
+		ret = t->wait_status->exit_code;
+		t->wait_status->exit_code=RET_STATUS_INVALID;
+		return ret;
+	}
+
+	sema_down(&t->wait_status->dead);
+	ret = t->wait_status->exit_code;
+	printf("%s: exit(%d)\n",t->name,t->wait_status->exit_code);
+	while(t->status == THREAD_BLOCKED)
+		thread_unblock(t);
+	
+	t->wait_status->exit_code=RET_STATUS_INVALID;
+	return ret;
+/*
 	struct thread *cur = thread_current();
 	struct thread *t;
 	int ret = -1;
@@ -151,6 +194,7 @@ process_wait (tid_t child_tid)
 		ws = list_entry(e, struct wait_status, elem);
 		if(child_tid == t->tid)
 		{
+			printf("FOUNDA CHILD!!!!!!!!!\n");
 			isChild=true;
 			break;
 		}
@@ -158,21 +202,21 @@ process_wait (tid_t child_tid)
 
 	if(!ws || !isChild)
 	{
-		//child_tid is not a child of the current_thread().
+		printf("FAILURE PROCESS_WAIT, child_tid is not a child of the current_thread().\n");
 		return -1;
 	}
 	
 	//check if already waiting
 	if(cur->wait_status->tid == child_tid)
 	{
-		//cur thread is already waiting on the child
+		printf("FAILURE PROCESS_WAIT, cur thread is already waiting on the child\n");
 		return-1;
 	}
 	//wait on child if alive
 	sema_down(&ws->dead);
 	return ws->exit_code;//ws->exit_code;
 	
-  return ret;
+  return ret;*/
 }
 
 /* Free the current process's resources. */
@@ -187,7 +231,7 @@ process_exit (void)
   file_close (cur->bin_file);
 
   /* Notify parent that we're dead. */
-	 printf ("%s: exit(%d)\n", cur->name, 0);
+	 //printf ("%s: exit(%d)\n", cur->name, 0);
   if (cur->wait_status != NULL) 
     {
       struct wait_status *cs = cur->wait_status;
@@ -552,10 +596,10 @@ reverse (int argc, char **argv)
 	char* holder;
    	int i;
 	int n = argc-1;
-	/*for(i=0;i<argc; i++)
+	for(i=0;i<argc; i++)
 	{
 		printf("argv[%d]=%s\n",i,argv[i]);
-	}*/
+	}
 
 	for(i=0; i < argc/2;i++)
 	{
@@ -565,10 +609,10 @@ reverse (int argc, char **argv)
 		n--;
 	}
 
-   	/*for(i=0;i<argc; i++)
+   	for(i=0;i<argc; i++)
 	{
 		printf("Reveresd argv[%d]=%s\n",i,argv[i]);
-	}*/
+	}
    return;
 }
 
@@ -638,8 +682,10 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
   if (push (kpage, &ofs, &argv, sizeof argv) == NULL
       || push (kpage, &ofs, &argc, sizeof argc) == NULL
       || push (kpage, &ofs, &null, sizeof null) == NULL)
+ {
+	printf("FAILED TO PUSH ONTO STACK\n");
     return false;
-
+ }
   /* Set initial stack pointer. */
   *esp = upage + ofs;
   return true;
