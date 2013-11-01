@@ -170,9 +170,8 @@ process_wait (tid_t child_tid)
 	}
 	//wait on child if alive
 	sema_down(&ws->dead);
-	return ws->exit_code;//ws->exit_code;
-	
-  return ret;
+	ret = ws->exit_code;//ws->exit_code;
+  	return ret;
 }
 
 /* Free the current process's resources. */
@@ -192,7 +191,8 @@ process_exit (void)
       struct wait_status *cs = cur->wait_status;
 
       /* add code */
-	sema_up(&cs->dead);
+
+      sema_up(&cs->dead);
       printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
 
       release_child (cs);
@@ -551,23 +551,14 @@ reverse (int argc, char **argv)
 	char* holder;
    	int i;
 	int n = argc-1;
-	/*for(i=0;i<argc; i++)
-	{
-		printf("argv[%d]=%s\n",i,argv[i]);
-	}*/
-
 	for(i=0; i < argc/2;i++)
 	{
+		printf("");
 		holder = argv[i];
 		argv[i] = argv[n];
 		argv[n]=holder;
 		n--;
 	}
-
-   	/*for(i=0;i<argc; i++)
-	{
-		printf("Reveresd argv[%d]=%s\n",i,argv[i]);
-	}*/
    return;
 }
 
