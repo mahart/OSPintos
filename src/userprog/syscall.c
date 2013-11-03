@@ -200,11 +200,7 @@ static int
 sys_exec (const char *ufile) 
 {
   int result;
-  if(!ufile)/*null pointer*/
-  {
-	return -1;
-  }
-  if(!is_user_vaddr(ufile))
+  if(!ufile || !is_user_vaddr(ufile))
   {
      return -1;
    }
@@ -356,6 +352,10 @@ sys_read (int handle, void *udst_, unsigned size)
   }
   else{
     fd = lookup_fd(handle);
+    if(!fd){
+	lock_release(&fs_lock);
+	return -1;
+    }
     if(!fd->file){
 	lock_release(&fs_lock);
 	return -1;

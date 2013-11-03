@@ -148,39 +148,47 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
-
+	struct list_elem* e;
 	struct thread* t;
+	struct thread* cur = thread_current();
 	int ret;
-	
+	bool found = false;
 	ret = -1;
 	
 	t=get_thread(child_tid);
-	
+
 	if(!t)
 	{
 		return -1;
 	}
+	
+	if(t->status== THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID){
 
-	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == -1)
-	{
-		
-		t->wait_status->exit_code=-1;
 		return -1;
+
 	}
 
-	if(t->wait_status->exit_code != 0 && t->wait_status->exit_code!= -1)
+	for(e = list_begin(&cur->children); e!= list_end(&cur->children); e= list_next(e))
 	{
-		ret = t->wait_status->exit_code;
-		t->wait_status->exit_code=-1;
-		return ret;
+		struct wait_status *cs = list_entry(e, struct wait_status, elem);
+
+		if(cs->tid == child_tid)
+		{
+			found = true;
+			break;
+		}
+	}
+	
+	if(!found)
+	{
+		return -1;
 	}
 
 	sema_down(&t->wait_status->dead);
 	ret = t->wait_status->exit_code;
 	while(t->status == THREAD_BLOCKED)
 		thread_unblock(t);
-	
-	t->wait_status->exit_code=-1;
+	t->wait_status->exit_code=RET_STATUS_INVALID;
 	return ret;
 
 }
