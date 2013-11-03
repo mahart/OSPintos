@@ -227,9 +227,7 @@ sys_create (const char *ufile, unsigned initial_size)
 {
   int result;
   if(!ufile)
-   {
     return sys_exit(-1);
-   }
   lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
   lock_release(&fs_lock);
@@ -261,22 +259,20 @@ sys_remove (const char *ufile)
 static int
 sys_open (const char *ufile) 
 {
+  if(!ufile){
+    return -1;
+  }
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
   struct file* f;
   int handle = -1;
   struct thread *cur = thread_current ();
 
-  if(!kfile)
-  {
-    return -1;
-  }
 
-  if(is_user_vaddr(kfile))
+ if(is_user_vaddr(kfile))
   {
     sys_exit(-1);
   }
-
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
@@ -289,9 +285,8 @@ sys_open (const char *ufile)
         }
       else 
 	{
-        	file_close (fd->file);
-		free(fd);
 		lock_release (&fs_lock);
+		free(fd);
 		return -1;
 	}
       lock_release (&fs_lock);
@@ -337,36 +332,42 @@ sys_filesize (int handle)
 static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
-  struct file_descriptor *fd = lookup_fd(handle);
+  
+  struct file_descriptor *fd;
   unsigned i;
   int ret = -1;
   lock_acquire(&fs_lock);
-  if(handle == STDIN_FILENO){
-    printf("Made it into the IO part or Read!\n");
-    for(i = 0; i != size; i++){
-      *(uint8_t *)(udst_ +i) = input_getc();
-      ret = size;
-    }
+  if(handle == STDIN_FILENO)
+  {
+    for(i = 0; i != size; i++)
+      	*(uint8_t *)(udst_ +i) = input_getc();
+	ret = size;
+	lock_release(&fs_lock);
+	return ret;
   }
-  else if (handle == STDOUT_FILENO){
+  else if (handle == STDOUT_FILENO)
+  {
 	lock_release(&fs_lock);
 	return -1;
   }
   else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
     lock_release(&fs_lock);
-    free(fd);
     sys_exit(-1);
   }
   else{
+    fd = lookup_fd(handle);
     if(!fd){
       lock_release(&fs_lock);
-      free(fd);
       return -1;
     }
-    ret = file_read(fd->file,udst_,size);
+    else if(!fd->file){
+	lock_release(&fs_lock);
+	return -1;
+    }
+    else
+       ret = file_read(fd->file,udst_,size);
   }    
   lock_release(&fs_lock);
-  free(fd);
   return ret;
 }
  
