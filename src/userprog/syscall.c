@@ -437,7 +437,6 @@ static int
 sys_seek (int handle, unsigned position) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
-	//printf("CALLING SYS_SEEK\n");
   if(!fd)
   {
 	printf("FAILURE IN SYS_SEEK, !fd\n");
@@ -455,7 +454,6 @@ static int
 sys_tell (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
-	//printf("CALLING SYS_TELL");
   if(!fd)
   {
 	printf("FAILURE IN SYS_TELL, !fd\n");
@@ -465,7 +463,6 @@ sys_tell (int handle)
   file_tell(fd->file);
   lock_release(&fs_lock);
   free(fd);
-  //thread_exit ();
   return 0;
 }
  
