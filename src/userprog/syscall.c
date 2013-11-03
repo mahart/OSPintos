@@ -168,6 +168,7 @@ copy_in_string (const char *us)
 static int
 sys_halt (void)
 {
+	//printf("CALLING SYS_HALT\n");
   shutdown_power_off ();
 }
  /* A file descriptor, for binding a file handle to a file. */
@@ -202,12 +203,10 @@ sys_exec (const char *ufile)
   int result;
   if(!ufile)/*null pointer*/
   {
-	printf("NULL POINTER IN SYS_EXEC\n");
 	return -1;
   }
   if(!is_user_vaddr(ufile))
   {
-	printf("!is_user_vaddr(ufile) in SYS_EXEC\n");
      return -1;
    }
   lock_acquire(&fs_lock);
@@ -244,6 +243,7 @@ static int
 sys_remove (const char *ufile) 
 {
 	int result;
+	//printf("CALLING SYS_REMOVE\n");
 	if(!ufile)
 	{
 		printf("FAILURE IN SYS_REMOVE,!ufile\n");
@@ -274,13 +274,11 @@ sys_open (const char *ufile)
 
   if(!kfile)
   {
-	printf("FAILURE IN SYS_OPEN, !kfile\n");
     return -1;
   }
 
-  if(!is_user_vaddr(kfile))
+  if(is_user_vaddr(kfile))
   {
-	printf("FAILING IN sys_open, !is_user_vaddr(kfile)\n");
     sys_exit(-1);
   }
 
@@ -305,7 +303,6 @@ sys_open (const char *ufile)
       lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
-  //thread_exit();
   return handle;
 }
  
@@ -334,6 +331,7 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
+	//printf("CALLING SYS_FILESIZE\n");
   lock_acquire(&fs_lock);
   length = file_length(fd->file);
   lock_release(&fs_lock);
@@ -349,6 +347,7 @@ sys_read (int handle, void *udst_, unsigned size)
   struct file_descriptor *fd = lookup_fd(handle);
   unsigned i;
   int ret = -1;
+	//printf("CALLING SYS_READ\n");
   lock_acquire(&fs_lock);
   if(handle == STDIN_FILENO){
     for(i = 0; i != size; i++){
@@ -447,7 +446,6 @@ sys_seek (int handle, unsigned position)
   file_seek(fd->file,position);
   lock_release(&fs_lock);
   free(fd);
-  //thread_exit ();
   return 0;
 }
  
@@ -465,7 +463,6 @@ sys_tell (int handle)
   file_tell(fd->file);
   lock_release(&fs_lock);
   free(fd);
-  //thread_exit ();
   return 0;
 }
  
@@ -474,6 +471,7 @@ static int
 sys_close (int handle) 
 {
   struct file_descriptor *fd = lookup_fd(handle);
+	//printf("CALLING SYS_CLOSE\n");
   if(!fd)
   {
 	printf("FAILURE IN SYS_CLOSE, !fd\n");
@@ -501,8 +499,8 @@ syscall_exit (void)
      lock_acquire(&fs_lock);
      file_close(fd->file);
      lock_release(&fs_lock);
-     //list_remove(e);
      free(fd);
   }
   return;
 }
+

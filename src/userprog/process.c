@@ -77,6 +77,7 @@ start_process (void *exec_)
   struct intr_frame if_;
   bool success;
 
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -161,12 +162,12 @@ process_wait (tid_t child_tid)
 
 	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == RET_STATUS_INVALID)
 	{
-		printf("t->status == THREAD_DYING || t->wait_status->exit_code == -1 in process_wait\n");
+		
 		t->wait_status->exit_code=RET_STATUS_INVALID;
 		return -1;
 	}
 
-	if(t->wait_status->exit_code != RET_STATUS_DEFAULT && t->wait_status->exit_code!=RET_STATUS_INVALID)
+	if(t->wait_status->exit_code != 0 && t->wait_status->exit_code!= -1)
 	{
 		ret = t->wait_status->exit_code;
 		t->wait_status->exit_code=RET_STATUS_INVALID;
@@ -179,44 +180,9 @@ process_wait (tid_t child_tid)
 	while(t->status == THREAD_BLOCKED)
 		thread_unblock(t);
 	
-	t->wait_status->exit_code=RET_STATUS_INVALID;
+	t->wait_status->exit_code=-1;
 	return ret;
-/*
-	struct thread *cur = thread_current();
-	struct thread *t;
-	int ret = -1;
-	bool isChild = false;
-	struct list_elem *e;
-	struct wait_status *ws;
-	
-	for(e = list_begin(&cur->children); e!=list_end(&cur->children); e=list_next(e))
-	{
-		ws = list_entry(e, struct wait_status, elem);
-		if(child_tid == t->tid)
-		{
-			printf("FOUNDA CHILD!!!!!!!!!\n");
-			isChild=true;
-			break;
-		}
-	}
 
-	if(!ws || !isChild)
-	{
-		printf("FAILURE PROCESS_WAIT, child_tid is not a child of the current_thread().\n");
-		return -1;
-	}
-	
-	//check if already waiting
-	if(cur->wait_status->tid == child_tid)
-	{
-		printf("FAILURE PROCESS_WAIT, cur thread is already waiting on the child\n");
-		return-1;
-	}
-	//wait on child if alive
-	sema_down(&ws->dead);
-	return ws->exit_code;//ws->exit_code;
-	
-  return ret;*/
 }
 
 /* Free the current process's resources. */
@@ -228,19 +194,16 @@ process_exit (void)
   uint32_t *pd;
 
   /* Close executable (and allow writes). */
-  file_close (cur->bin_file);
 
   /* Notify parent that we're dead. */
-	 //printf ("%s: exit(%d)\n", cur->name, 0);
   if (cur->wait_status != NULL) 
     {
       struct wait_status *cs = cur->wait_status;
 
-      /* add code */
-	sema_up(&cs->dead);
-      printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
+      sema_up(&cur->wait_status->dead);
+      //printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
 
-      release_child (cs);
+      release_child (cur->wait_status);
     }
 
   /* Free entries of children list. */
@@ -596,23 +559,14 @@ reverse (int argc, char **argv)
 	char* holder;
    	int i;
 	int n = argc-1;
-	/*for(i=0;i<argc; i++)
-	{
-		printf("argv[%d]=%s\n",i,argv[i]);
-	}*/
-
 	for(i=0; i < argc/2;i++)
 	{
+		printf("");
 		holder = argv[i];
 		argv[i] = argv[n];
 		argv[n]=holder;
 		n--;
 	}
-
-   	/*for(i=0;i<argc; i++)
-	{
-		printf("Reveresd argv[%d]=%s\n",i,argv[i]);
-	}*/
    return;
 }
 
