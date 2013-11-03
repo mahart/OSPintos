@@ -154,21 +154,29 @@ process_wait (tid_t child_tid)
 	
 	t=get_thread(child_tid);
 	
-	if(!t)
+	if()
 	{
-		printf("!T in process_wait\n");
-		return -1;
-	}
-
-	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == RET_STATUS_INVALID)
-	{
-		
+		//printf("!T in process_wait\n");
 		t->wait_status->exit_code=RET_STATUS_INVALID;
 		return -1;
 	}
 
-	if(t->wait_status->exit_code != 0 && t->wait_status->exit_code!= -1)
+	if(!t || t->status == THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID)
 	{
+		if(!t)
+		   printf("SHIT BE NULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		if(t->status == THREAD_DYING)
+			printf("SHIT BE DYING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+		if(t->wait_status->exit_code == RET_STATUS_INVALID)
+			printf("SHIT BE INVALID!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
+		t->wait_status->exit_code=RET_STATUS_INVALID;
+		return -1;
+	}
+
+	if(t->wait_status->exit_code != -1 && t->wait_status->exit_code!= RET_STATUS_INVALID)
+	{
+		printf("bad IN DERP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!, Exit code = %d\n",t->wait_status->exit_code);
 		ret = t->wait_status->exit_code;
 		t->wait_status->exit_code=RET_STATUS_INVALID;
 		return ret;
@@ -180,7 +188,7 @@ process_wait (tid_t child_tid)
 	while(t->status == THREAD_BLOCKED)
 		thread_unblock(t);
 	
-	t->wait_status->exit_code=-1;
+	t->wait_status->exit_code=RET_STATUS_INVALID;
 	return ret;
 
 }
