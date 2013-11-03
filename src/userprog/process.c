@@ -156,27 +156,25 @@ process_wait (tid_t child_tid)
 	
 	if(!t)
 	{
-		printf("!T in process_wait\n");
 		return -1;
 	}
 
-	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == RET_STATUS_INVALID)
+	if(t->status == THREAD_DYING)// || t->wait_status->exit_code == -1)
 	{
 		
-		t->wait_status->exit_code=RET_STATUS_INVALID;
+		t->wait_status->exit_code=-1;
 		return -1;
 	}
 
 	if(t->wait_status->exit_code != 0 && t->wait_status->exit_code!= -1)
 	{
 		ret = t->wait_status->exit_code;
-		t->wait_status->exit_code=RET_STATUS_INVALID;
+		t->wait_status->exit_code=-1;
 		return ret;
 	}
 
 	sema_down(&t->wait_status->dead);
 	ret = t->wait_status->exit_code;
-	printf("%s: exit(%d)\n",t->name,t->wait_status->exit_code);
 	while(t->status == THREAD_BLOCKED)
 		thread_unblock(t);
 	
@@ -201,7 +199,7 @@ process_exit (void)
       struct wait_status *cs = cur->wait_status;
 
       sema_up(&cur->wait_status->dead);
-      //printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
+      printf ("%s: exit(%d)\n", cur->name, cs->exit_code); // HACK all successful ;-)
 
       release_child (cur->wait_status);
     }
