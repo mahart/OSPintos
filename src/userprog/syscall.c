@@ -168,7 +168,6 @@ copy_in_string (const char *us)
 static int
 sys_halt (void)
 {
-	//printf("CALLING SYS_HALT\n");
   shutdown_power_off ();
 }
  /* A file descriptor, for binding a file handle to a file. */
@@ -229,7 +228,6 @@ sys_create (const char *ufile, unsigned initial_size)
   int result;
   if(!ufile)
    {
-	printf("FAILURE IN SYS_CREATE, !ufile\n");
     return sys_exit(-1);
    }
   lock_acquire (&fs_lock);
@@ -243,15 +241,12 @@ static int
 sys_remove (const char *ufile) 
 {
 	int result;
-	//printf("CALLING SYS_REMOVE\n");
 	if(!ufile)
 	{
-		printf("FAILURE IN SYS_REMOVE,!ufile\n");
 		return false;
 	}
 	if(!is_user_vaddr(ufile))
 	{
-		printf("FAILURE IN SYS_REMOVE, !is_user_vaddr(ufile)\n");
 		sys_exit(-1);
 	}
   lock_acquire(&fs_lock);
@@ -294,7 +289,6 @@ sys_open (const char *ufile)
         }
       else 
 	{
-		printf("FAILURE IN SYS_OPEN, d->file == NULL\n");
         	file_close (fd->file);
 		free(fd);
 		lock_release (&fs_lock);
@@ -323,6 +317,7 @@ lookup_fd (int handle)
       if(fd->handle == handle)
          return fd;
   }
+  return NULL;
 }
  
 /* Filesize system call. */
@@ -331,12 +326,10 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
-	//printf("CALLING SYS_FILESIZE\n");
   lock_acquire(&fs_lock);
   length = file_length(fd->file);
   lock_release(&fs_lock);
   free(fd);
-  //thread_exit ();
   return length;
 }
  
@@ -347,32 +340,33 @@ sys_read (int handle, void *udst_, unsigned size)
   struct file_descriptor *fd = lookup_fd(handle);
   unsigned i;
   int ret = -1;
-	//printf("CALLING SYS_READ\n");
   lock_acquire(&fs_lock);
   if(handle == STDIN_FILENO){
+    printf("Made it into the IO part or Read!\n");
     for(i = 0; i != size; i++){
       *(uint8_t *)(udst_ +i) = input_getc();
       ret = size;
     }
   }
+  else if (handle == STDOUT_FILENO){
+	lock_release(&fs_lock);
+	return -1;
+  }
   else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
     lock_release(&fs_lock);
     free(fd);
-	printf("FAILURE IN SYS_READ, !is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)\n");
-    return -1;
+    sys_exit(-1);
   }
   else{
     if(!fd){
       lock_release(&fs_lock);
       free(fd);
-	printf("FAILURE IN SYS_READ, handle != STDIN_FILENO\n");
       return -1;
     }
     ret = file_read(fd->file,udst_,size);
   }    
   lock_release(&fs_lock);
   free(fd);
- // thread_exit ();
   return ret;
 }
  
@@ -381,12 +375,11 @@ static int
 sys_write (int handle, void *usrc_, unsigned size) 
 {
   uint8_t *usrc = usrc_;
-  struct file_descriptor *fd = NULL;
+  struct file_descriptor *fd;
   int bytes_written = 0;
   /* Lookup up file descriptor. */
   if (handle != STDOUT_FILENO)
     fd = lookup_fd (handle);
-
   lock_acquire (&fs_lock);
   while (size > 0) 
     {
@@ -395,11 +388,11 @@ sys_write (int handle, void *usrc_, unsigned size)
       size_t write_amt = size < page_left ? size : page_left;
       off_t retval;
 
+
       /* Check that we can touch this user page. */
       if (!verify_user (usrc)) 
         {
           lock_release (&fs_lock);
-		printf("FAILED IN SYS_WRITE, !verify_user (usrc)");
           sys_exit (-1);
         }
 
@@ -409,6 +402,14 @@ sys_write (int handle, void *usrc_, unsigned size)
           putbuf (usrc, write_amt);
           retval = write_amt;
         }
+      else if(handle == STDIN_FILENO){
+          lock_release(&fs_lock);
+	  return -1;
+      }
+      else if(!fd){
+	lock_release(&fs_lock);
+	return -1;
+	}
       else
         retval = file_write (fd->file, usrc, write_amt);
       if (retval < 0) 
@@ -439,7 +440,6 @@ sys_seek (int handle, unsigned position)
   struct file_descriptor *fd = lookup_fd(handle);
   if(!fd)
   {
-	printf("FAILURE IN SYS_SEEK, !fd\n");
     return -1;
    }
   lock_acquire(&fs_lock);
@@ -456,7 +456,6 @@ sys_tell (int handle)
   struct file_descriptor *fd = lookup_fd(handle);
   if(!fd)
   {
-	printf("FAILURE IN SYS_TELL, !fd\n");
     return -1;
   }
   lock_acquire(&fs_lock);
@@ -470,11 +469,15 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
+  if(handle == STDIN_FILENO){
+	return -1;
+  }
+  else if(handle == STDOUT_FILENO){
+	return -1;
+  }
   struct file_descriptor *fd = lookup_fd(handle);
-	//printf("CALLING SYS_CLOSE\n");
   if(!fd)
   {
-	printf("FAILURE IN SYS_CLOSE, !fd\n");
     return -1;
   }
   lock_acquire(&fs_lock);
