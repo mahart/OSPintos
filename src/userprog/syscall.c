@@ -76,7 +76,10 @@ syscall_handler (struct intr_frame *f UNUSED)
   int args[3];
   copy_in(&call_nr, f->esp,sizeof call_nr);
   if(call_nr >= sizeof syscall_table/sizeof *syscall_table)
+  {
+	printf("FAILURE IN SYSCALL_TABLE, call_nr >= sizeof syscall_table/sizeof *syscall_table\n");
     thread_exit();
+  }
   sc = syscall_table+call_nr;
   ASSERT(sc->arg_cnt <= sizeof args/sizeof *args);
   memset(args, 0, sizeof args);
@@ -182,7 +185,6 @@ sys_exit (int exit_code)
 {
   struct thread* t = thread_current();
   struct file_descriptor *fd;
-  //printf("CALLING SYS_EXIT\n");
   while(!list_empty(&t->fds))
   {
 	fd = list_entry(list_begin(&t->fds), struct file_descriptor, elem);
@@ -190,7 +192,6 @@ sys_exit (int exit_code)
   }
   
   t->wait_status->exit_code = exit_code;
-	printf("Calling thread_exit() from sys_exit\n");
   thread_exit ();
   return -1;
 }
@@ -200,11 +201,14 @@ static int
 sys_exec (const char *ufile) 
 {
   int result;
-	printf("CALLING SYS_EXEC\n");
-  if(!ufile || !is_user_vaddr(ufile)){
-	printf("Broke in user vaddr\n");     
+  if(!ufile)/*null pointer*/
+  {
 	return -1;
-}
+  }
+  if(!is_user_vaddr(ufile))
+  {
+     return -1;
+   }
   lock_acquire(&fs_lock);
   result = process_execute(ufile);
   lock_release(&fs_lock);
@@ -215,7 +219,6 @@ sys_exec (const char *ufile)
 static int
 sys_wait (tid_t child) 
 {
-	//printf("CALLING SYS_WAIT\n");
 	return process_wait(child);
 }
  
@@ -224,13 +227,15 @@ static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
   int result;
- 	//printf("CALLING SYS_CREATE\n");
   if(!ufile)
+   {
+	printf("FAILURE IN SYS_CREATE, !ufile\n");
     return sys_exit(-1);
+   }
   lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
   lock_release(&fs_lock);
-	return result;
+  return result;
 }
  
 /* Remove system call. */
@@ -240,9 +245,15 @@ sys_remove (const char *ufile)
 	int result;
 	//printf("CALLING SYS_REMOVE\n");
 	if(!ufile)
+	{
+		printf("FAILURE IN SYS_REMOVE,!ufile\n");
 		return false;
+	}
 	if(!is_user_vaddr(ufile))
+	{
+		printf("FAILURE IN SYS_REMOVE, !is_user_vaddr(ufile)\n");
 		sys_exit(-1);
+	}
   lock_acquire(&fs_lock);
    result =filesys_remove(ufile);
   lock_release(&fs_lock);
@@ -257,9 +268,19 @@ sys_open (const char *ufile)
 {
   char *kfile = copy_in_string (ufile);
   struct file_descriptor *fd;
+  struct file* f;
   int handle = -1;
   struct thread *cur = thread_current ();
-	//printf("CALLING SYS_OPEN\n");
+
+  if(!kfile)
+  {
+    return -1;
+  }
+
+  if(is_user_vaddr(kfile))
+  {
+    sys_exit(-1);
+  }
 
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
@@ -268,14 +289,15 @@ sys_open (const char *ufile)
       fd->file = filesys_open (kfile);
       if (fd->file != NULL)
         {
-          
           handle = fd->handle = cur->next_handle++;
           list_push_front (&cur->fds, &fd->elem);
         }
       else 
 	{
+		printf("FAILURE IN SYS_OPEN, d->file == NULL\n");
         	file_close (fd->file);
 		free(fd);
+		lock_release (&fs_lock);
 		return -1;
 	}
       lock_release (&fs_lock);
@@ -336,12 +358,14 @@ sys_read (int handle, void *udst_, unsigned size)
   else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
     lock_release(&fs_lock);
     free(fd);
+	printf("FAILURE IN SYS_READ, !is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)\n");
     return -1;
   }
   else{
     if(!fd){
       lock_release(&fs_lock);
       free(fd);
+	printf("FAILURE IN SYS_READ, handle != STDIN_FILENO\n");
       return -1;
     }
     ret = file_read(fd->file,udst_,size);
@@ -359,7 +383,6 @@ sys_write (int handle, void *usrc_, unsigned size)
   uint8_t *usrc = usrc_;
   struct file_descriptor *fd = NULL;
   int bytes_written = 0;
-	//printf("CALLING SYS_WRITE\n");
   /* Lookup up file descriptor. */
   if (handle != STDOUT_FILENO)
     fd = lookup_fd (handle);
@@ -376,6 +399,7 @@ sys_write (int handle, void *usrc_, unsigned size)
       if (!verify_user (usrc)) 
         {
           lock_release (&fs_lock);
+		printf("FAILED IN SYS_WRITE, !verify_user (usrc)");
           sys_exit (-1);
         }
 
@@ -415,7 +439,10 @@ sys_seek (int handle, unsigned position)
   struct file_descriptor *fd = lookup_fd(handle);
 	//printf("CALLING SYS_SEEK\n");
   if(!fd)
+  {
+	printf("FAILURE IN SYS_SEEK, !fd\n");
     return -1;
+   }
   lock_acquire(&fs_lock);
   file_seek(fd->file,position);
   lock_release(&fs_lock);
@@ -430,7 +457,10 @@ sys_tell (int handle)
   struct file_descriptor *fd = lookup_fd(handle);
 	//printf("CALLING SYS_TELL");
   if(!fd)
+  {
+	printf("FAILURE IN SYS_TELL, !fd\n");
     return -1;
+  }
   lock_acquire(&fs_lock);
   file_tell(fd->file);
   lock_release(&fs_lock);
@@ -446,7 +476,10 @@ sys_close (int handle)
   struct file_descriptor *fd = lookup_fd(handle);
 	//printf("CALLING SYS_CLOSE\n");
   if(!fd)
+  {
+	printf("FAILURE IN SYS_CLOSE, !fd\n");
     return -1;
+  }
   lock_acquire(&fs_lock);
   file_close(fd->file);
   list_remove(&fd->elem);

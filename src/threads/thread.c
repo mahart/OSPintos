@@ -292,8 +292,10 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+	//printf("Calling process_exit\n");
   process_exit ();
 #endif
+	//printf("Calling syscall_exit\n");
   syscall_exit ();
   
   /* Remove thread from all threads list, set our status to dying,
@@ -435,6 +437,22 @@ kernel_thread (thread_func *function, void *aux)
   thread_exit ();       /* If function() returns, kill the thread. */
 }
 
+
+struct thread* get_thread(tid_t tid)
+{
+	struct list_elem* e;
+	struct thread *t;
+
+	t = NULL;
+	for (e = list_begin(&all_list); e!=list_end(&all_list); e = list_next(e))
+	{
+		t = list_entry(e, struct thread, allelem);
+		if(t->tid == tid)
+			return t;
+	}
+	printf("FAIURE IN get_thread, couldn't find a thread with the TID\n");
+	return NULL;
+}
 /* Returns the running thread. */
 struct thread *
 running_thread (void) 
