@@ -356,11 +356,7 @@ sys_read (int handle, void *udst_, unsigned size)
   }
   else{
     fd = lookup_fd(handle);
-    if(!fd){
-      lock_release(&fs_lock);
-      return -1;
-    }
-    else if(!fd->file){
+    if(!fd->file){
 	lock_release(&fs_lock);
 	return -1;
     }
