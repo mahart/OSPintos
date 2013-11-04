@@ -62,7 +62,6 @@ process_execute (const char *file_name)
         list_push_back (&thread_current ()->children, &exec.wait_status->elem);
       else
 	{
-		printf("FAILURE PROCESS EXECUTE, !exec.success\n");
           	tid = TID_ERROR;
  	}
     }
@@ -110,7 +109,6 @@ start_process (void *exec_)
   sema_up (&exec->load_done);
   if (!success) 
   {
-	printf("FAILURE START PROCESS, !sucess\n");
     thread_exit ();
   }
 
@@ -148,9 +146,9 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
+
+	struct thread* t, *cur = thread_current();
 	struct list_elem* e;
-	struct thread* t;
-	struct thread* cur = thread_current();
 	int ret;
 	bool found = false;
 	ret = -1;
@@ -162,23 +160,24 @@ process_wait (tid_t child_tid)
 		return -1;
 	}
 	
-	if(t->status== THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID){
-
+	
+	if(t->status == THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID)
+	{
 		return -1;
-
 	}
 
-	for(e = list_begin(&cur->children); e!= list_end(&cur->children); e= list_next(e))
-	{
-		struct wait_status *cs = list_entry(e, struct wait_status, elem);
-
+		
+	for (e = list_begin (&cur->children); e != list_end (&cur->children); e = list_next(e)) 
+    	{
+    		struct wait_status *cs = list_entry (e, struct wait_status, elem);
+		
 		if(cs->tid == child_tid)
 		{
 			found = true;
 			break;
 		}
 	}
-	
+
 	if(!found)
 	{
 		return -1;
@@ -188,8 +187,10 @@ process_wait (tid_t child_tid)
 	ret = t->wait_status->exit_code;
 	while(t->status == THREAD_BLOCKED)
 		thread_unblock(t);
+	
 	t->wait_status->exit_code=RET_STATUS_INVALID;
 	return ret;
+	
 
 }
 
@@ -645,7 +646,6 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
       || push (kpage, &ofs, &argc, sizeof argc) == NULL
       || push (kpage, &ofs, &null, sizeof null) == NULL)
  {
-	printf("FAILED TO PUSH ONTO STACK\n");
     return false;
  }
   /* Set initial stack pointer. */
