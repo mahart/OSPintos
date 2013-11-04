@@ -189,36 +189,6 @@ process_wait (tid_t child_tid)
 	
 	t->wait_status->exit_code=RET_STATUS_INVALID;
 	return ret;
-	/*
-	if(!t || t->status == THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID)
-	{
-		if(!t)
-		   printf("SHIT BE NULL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-		if(t->status == THREAD_DYING)
-			printf("SHIT BE DYING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-		if(t->wait_status->exit_code == RET_STATUS_INVALID)
-			printf("SHIT BE INVALID!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-
-		t->wait_status->exit_code=RET_STATUS_INVALID;
-
-		return -1;
-	}
-
-	if(t->wait_status->exit_code != -1 && t->wait_status->exit_code!= RET_STATUS_INVALID)
-	{
-		printf("bad IN DERP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!, Exit code = %d\n",t->wait_status->exit_code);
-		ret = t->wait_status->exit_code;
-		t->wait_status->exit_code=-1;
-		return ret;
-	}
-
-	sema_down(&t->wait_status->dead);
-	ret = t->wait_status->exit_code;
-	while(t->status == THREAD_BLOCKED)
-		thread_unblock(t);
-	
-	t->wait_status->exit_code=RET_STATUS_INVALID;
-	return ret;*/
 
 }
 
@@ -592,7 +562,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static void
 reverse (int argc, char **argv) 
 {
-   /* add code */
 	char* holder;
    	int i;
 	int n = argc-1;
@@ -724,3 +693,4 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+

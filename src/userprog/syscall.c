@@ -236,12 +236,10 @@ static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
   int result;
-  if(!ufile)
+  if(!ufile || !verify_user(ufile))
     return sys_exit(-1);
 
-  //lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
-  //lock_release(&fs_lock);
   return result;
 }
  
@@ -258,9 +256,7 @@ sys_remove (const char *ufile)
 	{
 		sys_exit(-1);
 	}
-  //lock_acquire(&fs_lock);
    result =filesys_remove(ufile);
- // lock_release(&fs_lock);
 	return result;
 }
  
@@ -287,7 +283,6 @@ sys_open (const char *ufile)
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
-      //lock_acquire (&fs_lock);
       fd->file = filesys_open (kfile);
       if (fd->file != NULL)
         {
@@ -296,11 +291,9 @@ sys_open (const char *ufile)
         }
       else 
 	{
-		//lock_release (&fs_lock);
 		free(fd);
 		return -1;
 	}
-      //lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
   return handle;
@@ -338,9 +331,7 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
-  //lock_acquire(&fs_lock);
   length = file_length(fd->file);
-  //lock_release(&fs_lock);
   return length;
 }
  
@@ -438,9 +429,7 @@ sys_seek (int handle, unsigned position)
   {
     return -1;
    }
-  //lock_acquire(&fs_lock);
   file_seek(fd->file,position);
-  //lock_release(&fs_lock);
   return 0;
 }
  
@@ -453,9 +442,7 @@ sys_tell (int handle)
   {
     return -1;
   }
-  //lock_acquire(&fs_lock);
   file_tell(fd->file);
-  //lock_release(&fs_lock);
   return 0;
 }
  
@@ -498,4 +485,5 @@ syscall_exit (void)
   
   return;
 }
+
 

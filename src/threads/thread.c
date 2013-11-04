@@ -450,7 +450,6 @@ struct thread* get_thread(tid_t tid)
 		if(t->tid == tid)
 			return t;
 	}
-	printf("FAIURE IN get_thread, couldn't find a thread with the TID\n");
 	return NULL;
 }
 /* Returns the running thread. */
