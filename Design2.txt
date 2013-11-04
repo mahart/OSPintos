@@ -84,6 +84,10 @@ For a write we use put what we are writing into a buffer and then return the byt
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+In our implementation we would have to check for it at at least once. This is due to how we are copying in the data. However if the data went acrross two pages we would have to check it twice. When copying in 2 bytes of data the situation is the same as it depends on if it sperates into two pages. 
+
+A way to improve this is to not check the addresses and let the system continue if there is an invalid address. This is a way to get 0 checks and would be way faster. On reads it would just keep on reading until it got to an invalid statement. However for system security we should not do this as this is unstable and might be dangorous on a large scale.
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
 

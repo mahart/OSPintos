@@ -150,8 +150,9 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   /* Handle bad dereferences from system call implementation. */
-
-  /* add code */
+  if(not_present || (is_kernel_vaddr(fault_addr)&&user)){
+	syscall_exit();
+  }
 
 
   /* To implement virtual memory, delete the rest of the function
