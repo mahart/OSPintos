@@ -308,7 +308,8 @@ lookup_fd (int handle)
 /* Add code to lookup file descriptor in the current thread's fds */
   struct list files =   thread_current()->fds;
   struct list_elem *e;
-
+  if(handle < 1 || handle > thread_current()->next_handle)
+	return NULL;
   if(handle == STDOUT_FILENO || handle == STDIN_FILENO)
 	return NULL;
   
