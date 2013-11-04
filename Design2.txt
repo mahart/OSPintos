@@ -113,6 +113,11 @@ A way to improve this is to not check the addresses and let the system continue 
 >> managing these issues.  Give an example.
 
 
+To prevent the main code to be hidden by error-handling we used the functions is_user_vaddr and valadate_user to prevent overwriting or writing to bad memory. We called these at the start of every function and usually in a ored if statement. This prevents us getting to far into the code before we have to back out and makes it easy to read.
+
+To make shure the buffers and locks are released proporally we go into a if statement and release the right items and returns the right error message. This is after we have checked everything and it might add some complexity to the code but in the end it is better than locking and unlocking every check. 
+
+A clear example of this in sys_write as it has to manage multiple errors that need to be detected a right points. The lock is called before the while loop so if there is an error in the loop we must release the lock before returning it. We also need to check to see if it is STDIN or STDOUT and we do this using if statements. We also make shure our buffer is valid in the loop as in this case the buffer is better checked in the loop.
 
 ---- SYNCHRONIZATION ----
 
