@@ -29,19 +29,27 @@ Matt Heart
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+	We did not need to change or add any `struct' or `struct' member, global or static variable, `typedef', or enumeration. From the source code given in Pintos2, we only needed to modifiy the reverse algorithm.
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+	We take in the command line string, store it in an array using strtok_r() to split the arguments for each index of the array. We then reverse the arguemnts by using two values, one for the lowest index and one for the highest index of the array, and swapping them. We then increment the low index and decrement the high index and swap. We continue until the indicies are the mid index of the array. Next we use the given push() to place the arguments, argument count, and null onto the stack. Push() will return null if we get a stack overflow. In the event of an overflow we shutdown the program.
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+	Pintos uses strtok_r() instead of strtok() because strtok() modifies the actual string and is not thread safe, strtok_r() uses a pointer to move through the string and is thread safe.
+
 >> A4: In Pintos, the kernel separates commands into an executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+	The Unix approach removes the danger of multiple threads trying to parse a single input string. While strtok_r() also removes this danger in the programs, the Unix approach removes even the chance. Another advantage of the Unix approach is it lessens the demand on the kernel threads.  By doing the work for the program, the Unix method can parse exceptionally syntactically difficult strings without using the kernels resources.
 
 			     SYSTEM CALLS
 			     ============
@@ -65,17 +73,14 @@ A discriptor for a open file in the process.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
 
-File Descriptors are associated with open files by having a number assigned to them so you can find them.
-File discriptors are unique within a system process as syscalls are only associated with a proccess. 
+	File_descriptors have a pointer to their associated open file, they are also assigned a handle to make them easy to lookup using lookup_fd(int handle), and they have a list_elem to associate the file with the thread using it.  File discriptors are unique within a system process as syscalls are only associated with a proccess. 
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
 
-For a file read from the kernal it checks the handle to see if it is a file from the kernal.
-Then it reads it in from a buffer for the size and then returns the size read in.
-For a write we use put what we are writing into a buffer and then return the bytes writen.
+	For a file read from the kernal, we check the handle to see if the file is actually in the kernal. Then we read it from the buffer and return the size read in.  For a write, we place the data to be written into a buffer and then return the number of bytes writen.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
