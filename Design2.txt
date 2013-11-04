@@ -29,19 +29,27 @@ Matt Heart
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+	We did not need to change or add any `struct' or `struct' member, global or static variable, `typedef', or enumeration. From the source code given in Pintos2, we only needed to modifiy the reverse algorithm.
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+	We take in the command line string, store it in an array using strtok_r() to split the arguments for each index of the array. We then reverse the arguemnts by using two values, one for the lowest index and one for the highest index of the array, and swapping them. We then increment the low index and decrement the high index and swap. We continue until the indicies are the mid index of the array. Next we use the given push() to place the arguments, argument count, and null onto the stack. Push() will return null if we get a stack overflow. In the event of an overflow we shutdown the program.
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+	Pintos uses strtok_r() instead of strtok() because strtok() modifies the actual string and is not thread safe, strtok_r() uses a pointer to move through the string and is thread safe.
+
 >> A4: In Pintos, the kernel separates commands into an executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+	The Unix approach removes the danger of multiple threads trying to parse a single input string. While strtok_r() also removes this danger in the programs, the Unix approach removes even the chance. Another advantage of the Unix approach is it lessens the demand on the kernel threads.  By doing the work for the program, the Unix method can parse exceptionally syntactically difficult strings without using the kernels resources.
 
 			     SYSTEM CALLS
 			     ============
@@ -52,30 +60,27 @@ Matt Heart
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-struct file_descriptor
-  {
-    struct list_elem elem;      /* List element. */
-    struct file *file;          /* File. */
-    int handle;                 /* File handle. */
-  };
+	struct file_descriptor
+ 	{
+    		struct list_elem elem;      /* List element. */
+   		struct file *file;          /* File. */
+    		int handle;                 /* File handle. */
+  	};
 
-A discriptor for a open file in the process. 
+	A discriptor for a open file in the process with a integer for unique identification, a list_elem for storage in a threads file list and a pointer to the actual file. 
 
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
 
-File Descriptors are associated with open files by having a number assigned to them so you can find them.
-File discriptors are unique within a system process as syscalls are only associated with a proccess. 
+	File_descriptors have a pointer to their associated open file, they are also assigned a handle to make them easy to lookup using lookup_fd(int handle), and they have a list_elem to associate the file with the thread using it.  File discriptors are unique within a system process as syscalls are only associated with a proccess. 
 
 ---- ALGORITHMS ----
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
 
-For a file read from the kernal it checks the handle to see if it is a file from the kernal.
-Then it reads it in from a buffer for the size and then returns the size read in.
-For a write we use put what we are writing into a buffer and then return the bytes writen.
+	For a file read from the kernal, we check the handle to see if the file is actually in the kernal. Then we read it from the buffer and return the size read in.  For a write, we place the data to be written into a buffer and then return the number of bytes writen.
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -90,6 +95,8 @@ A way to improve this is to not check the addresses and let the system continue 
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+	Sys_wait() simply calls and returns the value from process_wait(). Process_wait() first gets the thread associated with the passed in tid. If the thread, 't', was not found, we immediately return -1. Next if 't' is already dying or if the current thread has already called process_wait on 't', we return -1. To check if we have already called process wait we see if 't's exit_code is RET_STATUS_INVALID. We assign RET_STATUS_INVALID to 't's exit_code on a successful call to process_wait. Since RET_STATUS_INVALID is not a valid exit_code and exit_code will change when 't' properly exits, we do not need to worry about other conflicts. After the previous checks, we then determine if 't' is a child of the current thread. If it isn't a child, we return -1. If it is a child, we wait for it to die by calling sema_down(&t->wait_status->dead). after it has died we store its exit_code and wait for it to be unblocked in the event 't' was blocked while it was dying. After we are sure that 't' is dead, we set its exit_code to RET_STATUS_INALID to ensure that process_wait cannot be called on 't' again, and return 't's orignal exit_code.
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -114,7 +121,7 @@ A way to improve this is to not check the addresses and let the system continue 
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
 
-it checks to see if the file is already in the virtual address. Then it is passed back by returning -1. 
+	Before we even try to load the new executable we check to see if the passed in pointer is NULL or if it ! a verified user address. In either case, we immediately return -1, Next, we ensure that sys_exec doesn't return until after the executable loads by lock_aquire(&fs_lock) before we begin loading, to avoid interruptions, then we store the valure returned by process_execute(). Process_execute will return a -1 if the executable failed to load properly. We the release the lock on fs_lock and return the value to the calling thread.
 
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -123,19 +130,24 @@ it checks to see if the file is already in the virtual address. Then it is passe
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
+	To ensure that P waits for c before c exits, we wait on c's wait_status->dead semaphore, once this semaphore is sema_uped, we wait for c to be unblocked to ensure it is completely dead. If c has already exited, the the two previous wait conditions will not trigger and P will recieve c's exit_code. We do not declare any new resources inside our process_wait() so we do not need to worry about free resources locally. We rely on the other sys_calls that call process_wait to properly release any resources on P and C. 
+
 ---- RATIONALE ----
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+	We chose to implement user memory on the exceptions side.  While it appeared more difficult, it only needed to be added in one place, so it reduced our actualy work-load.
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
-Advantanges to our implematation of file discriptors is that they are easy to lookup but yet complex enough to get the job done. 
-A major disavantage is that they are linked to the process and not the filesystem as a whole.
+	Our file descriptors provide an easy way to identify each descriptor and to associate each file with thread that will use it. However, our file descriptors have only the bare minimum amout of information and are link to the process and not hte filesystem as a whole.
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+	We did not change the mapping.
 
 			   SURVEY QUESTIONS
 			   ================
@@ -148,13 +160,20 @@ the quarter.
 
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard?  Did it take too long or too little time?
-
+	
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
 
 >> Is there some particular fact or hint we should give students in
 >> future quarters to help them solve the problems?  Conversely, did you
 >> find any of our guidance to be misleading?
+
+	In process_execute we found we needed to replace ece.file_name with
+ 		exec.file_name = (char*) malloc((strlen(file_name)+1)*sizeof(char));
+  		strlcpy(exec.file_name, file_name, strlen(file_name)+1);
+	If this was in the project description, we were blind and did not see it. 
+	If it wasn't, this problem took alot of time to try and fix.
+
 
 >> Do you have any suggestions for the TAs to more effectively assist
 >> students, either for future quarters or the remaining projects?

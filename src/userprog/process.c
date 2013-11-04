@@ -153,7 +153,7 @@ process_wait (tid_t child_tid)
 	
 	t=get_thread(child_tid);
 	
-	if(!t)
+	if(!t )
 	{
 		return -1;
 	}
