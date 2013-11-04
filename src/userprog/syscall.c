@@ -77,7 +77,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   copy_in(&call_nr, f->esp,sizeof call_nr);
   if(call_nr >= sizeof syscall_table/sizeof *syscall_table)
   {
-	printf("FAILURE IN SYSCALL_TABLE, call_nr >= sizeof syscall_table/sizeof *syscall_table\n");
     thread_exit();
   }
   sc = syscall_table+call_nr;
@@ -129,10 +128,16 @@ copy_in (void *dst_, const void *usrc_, size_t size)
 {
   uint8_t *dst = dst_;
   const uint8_t *usrc = usrc_;
- 
+	if(!verify_user(usrc)|| usrc==NULL )
+	{
+		thread_exit();
+        } 
   for (; size > 0; size--, dst++, usrc++) 
+  {
+	
     if (usrc >= (uint8_t *) PHYS_BASE || !get_user (dst, usrc)) 
       thread_exit ();
+  }
 }
  
 /* Creates a copy of user string US in kernel memory
@@ -145,11 +150,15 @@ copy_in_string (const char *us)
 {
   char *ks;
   size_t length;
- 
+  if(!verify_user(us) || !us)
+  {
+	thread_exit();
+  }
+
   ks = palloc_get_page (0);
   if (ks == NULL)
     thread_exit ();
- 
+   
   for (length = 0; length < PGSIZE; length++)
     {
       if (us >= (char *) PHYS_BASE || !get_user (ks + length, us++)) 
@@ -184,6 +193,7 @@ sys_exit (int exit_code)
 {
   struct thread* t = thread_current();
   struct file_descriptor *fd;
+
   while(!list_empty(&t->fds))
   {
 	fd = list_entry(list_begin(&t->fds), struct file_descriptor, elem);
@@ -200,11 +210,11 @@ static int
 sys_exec (const char *ufile) 
 {
   int result;
-  if(!ufile)/*null pointer*/
+  if(!ufile )/*null pointer*/
   {
 	return -1;
   }
-  if(!is_user_vaddr(ufile))
+  if(!verify_user(ufile))
   {
      return -1;
    }
@@ -228,9 +238,10 @@ sys_create (const char *ufile, unsigned initial_size)
   int result;
   if(!ufile)
     return sys_exit(-1);
-  lock_acquire (&fs_lock);
+
+  //lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
-  lock_release(&fs_lock);
+  //lock_release(&fs_lock);
   return result;
 }
  
@@ -243,13 +254,13 @@ sys_remove (const char *ufile)
 	{
 		return false;
 	}
-	if(!is_user_vaddr(ufile))
+	if(!verify_user(ufile))
 	{
 		sys_exit(-1);
 	}
-  lock_acquire(&fs_lock);
+  //lock_acquire(&fs_lock);
    result =filesys_remove(ufile);
-  lock_release(&fs_lock);
+ // lock_release(&fs_lock);
 	return result;
 }
  
@@ -269,14 +280,14 @@ sys_open (const char *ufile)
   struct thread *cur = thread_current ();
 
 
- if(is_user_vaddr(kfile))
+ if(verify_user(kfile))
   {
     sys_exit(-1);
   }
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
-      lock_acquire (&fs_lock);
+      //lock_acquire (&fs_lock);
       fd->file = filesys_open (kfile);
       if (fd->file != NULL)
         {
@@ -285,11 +296,11 @@ sys_open (const char *ufile)
         }
       else 
 	{
-		lock_release (&fs_lock);
+		//lock_release (&fs_lock);
 		free(fd);
 		return -1;
 	}
-      lock_release (&fs_lock);
+      //lock_release (&fs_lock);
     }
   palloc_free_page (kfile);
   return handle;
@@ -302,16 +313,22 @@ static struct file_descriptor *
 lookup_fd (int handle)
 {
 /* Add code to lookup file descriptor in the current thread's fds */
-  struct thread *cur = thread_current();
+  struct list files =   thread_current()->fds;
   struct list_elem *e;
 
-  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
+  if(handle == STDOUT_FILENO || handle == STDIN_FILENO)
+	return NULL;
+  
+  for(e = list_begin(&files); e!=list_end(&files); e = e->next)
   {
-      struct file_descriptor *fd;
-      fd = list_entry (e,struct file_descriptor,elem);
-      if(fd->handle == handle)
-         return fd;
+     struct file_descriptor *fd = list_entry(e, struct file_descriptor, elem);
+
+	if(fd!=NULL && fd->handle == handle)
+        {
+		return fd;
+        }
   }
+  
   return NULL;
 }
  
@@ -321,9 +338,9 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
-  lock_acquire(&fs_lock);
+  //lock_acquire(&fs_lock);
   length = file_length(fd->file);
-  lock_release(&fs_lock);
+  //lock_release(&fs_lock);
   free(fd);
   return length;
 }
@@ -332,39 +349,22 @@ sys_filesize (int handle)
 static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
-  
-  struct file_descriptor *fd;
-  unsigned i;
-  int ret = -1;
-  lock_acquire(&fs_lock);
-  if(handle == STDIN_FILENO)
+	
+ if(!verify_user(udst_) || !udst_)
+ {
+   thread_exit();
+ }
+  struct file_descriptor *fd = lookup_fd(handle);
+  int result = -1;
+  if(fd!=NULL)
   {
-    for(i = 0; i != size; i++)
-      	*(uint8_t *)(udst_ +i) = input_getc();
-	ret = size;
+	lock_acquire(&fs_lock);
+	struct file *f = fd->file;
+	result = file_read(f,udst_,size);
 	lock_release(&fs_lock);
-	return ret;
   }
-  else if (handle == STDOUT_FILENO)
-  {
-	lock_release(&fs_lock);
-	return -1;
-  }
-  else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
-    lock_release(&fs_lock);
-    sys_exit(-1);
-  }
-  else{
-    fd = lookup_fd(handle);
-    if(!fd->file){
-	lock_release(&fs_lock);
-	return -1;
-    }
-    else
-       ret = file_read(fd->file,udst_,size);
-  }    
-  lock_release(&fs_lock);
-  return ret;
+	
+  return result;
 }
  
 /* Write system call. */
@@ -439,9 +439,9 @@ sys_seek (int handle, unsigned position)
   {
     return -1;
    }
-  lock_acquire(&fs_lock);
+  //lock_acquire(&fs_lock);
   file_seek(fd->file,position);
-  lock_release(&fs_lock);
+  //lock_release(&fs_lock);
   free(fd);
   return 0;
 }
@@ -455,9 +455,9 @@ sys_tell (int handle)
   {
     return -1;
   }
-  lock_acquire(&fs_lock);
+  //lock_acquire(&fs_lock);
   file_tell(fd->file);
-  lock_release(&fs_lock);
+  //lock_release(&fs_lock);
   free(fd);
   return 0;
 }
@@ -466,22 +466,22 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
-  if(handle == STDIN_FILENO){
-	return -1;
-  }
-  else if(handle == STDOUT_FILENO){
-	return -1;
-  }
+
   struct file_descriptor *fd = lookup_fd(handle);
+
   if(!fd)
   {
     return -1;
   }
+
   lock_acquire(&fs_lock);
   file_close(fd->file);
   list_remove(&fd->elem);
-  lock_release(&fs_lock);
   free(fd);
+  lock_release(&fs_lock);
+
+  
+ 
   return 0;
 }
  
@@ -489,18 +489,16 @@ sys_close (int handle)
 void
 syscall_exit (void) 
 {
-  struct thread *cur = thread_current();
-  struct list_elem *e;
-
-  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
+  struct thread *cur;
+  struct file_descriptor *fd;
+  
+  cur = thread_current();
+  while(!list_empty(&cur->fds))
   {
-     struct file_descriptor *fd;
-     fd = list_entry(e, struct file_descriptor, elem);
-     lock_acquire(&fs_lock);
-     file_close(fd->file);
-     lock_release(&fs_lock);
-     free(fd);
+	fd = list_entry(list_front(&cur->fds),struct file_descriptor, elem);
+	sys_close(fd->handle);
   }
+  
   return;
 }
 
