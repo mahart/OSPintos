@@ -256,7 +256,7 @@ sys_remove (const char *ufile)
 	{
 		sys_exit(-1);
 	}
-   result =filesys_remove(ufile);
+   	result =filesys_remove(ufile);
 	return result;
 }
  
