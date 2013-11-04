@@ -146,7 +146,6 @@ release_child (struct wait_status *cs)
 int
 process_wait (tid_t child_tid) 
 {
-
 	struct thread* t, *cur = thread_current();
 	struct list_elem* e;
 	int ret;
@@ -154,12 +153,12 @@ process_wait (tid_t child_tid)
 	ret = -1;
 	
 	t=get_thread(child_tid);
-
+	
 	if(!t)
 	{
 		return -1;
 	}
-	
+
 	
 	if(t->status == THREAD_DYING || t->wait_status->exit_code == RET_STATUS_INVALID)
 	{
@@ -190,7 +189,6 @@ process_wait (tid_t child_tid)
 	
 	t->wait_status->exit_code=RET_STATUS_INVALID;
 	return ret;
-	
 
 }
 
@@ -564,7 +562,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static void
 reverse (int argc, char **argv) 
 {
-   /* add code */
 	char* holder;
    	int i;
 	int n = argc-1;
@@ -696,3 +693,4 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+

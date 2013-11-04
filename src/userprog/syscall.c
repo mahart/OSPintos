@@ -236,12 +236,10 @@ static int
 sys_create (const char *ufile, unsigned initial_size) 
 {
   int result;
-  if(!ufile)
+  if(!ufile || !verify_user(ufile))
     return sys_exit(-1);
 
-  //lock_acquire (&fs_lock);
   result = filesys_create(ufile,initial_size);
-  //lock_release(&fs_lock);
   return result;
 }
  
@@ -258,9 +256,7 @@ sys_remove (const char *ufile)
 	{
 		sys_exit(-1);
 	}
-  //lock_acquire(&fs_lock);
    result =filesys_remove(ufile);
- // lock_release(&fs_lock);
 	return result;
 }
  
@@ -282,14 +278,12 @@ sys_open (const char *ufile)
 
  if(verify_user(kfile))
   {
-   return -1;
+    sys_exit(-1);
   }
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
-      //lock_acquire (&fs_lock);
       fd->file = filesys_open (kfile);
-      lock_release (&fs_lock);
       if (fd->file != NULL)
         {
           handle = fd->handle = cur->next_handle++;
@@ -297,7 +291,6 @@ sys_open (const char *ufile)
         }
       else 
 	{
-		//lock_release (&fs_lock);
 		free(fd);
 		return -1;
 	}
@@ -338,9 +331,7 @@ sys_filesize (int handle)
 {
   struct file_descriptor *fd = lookup_fd(handle);
   off_t length;
-  //lock_acquire(&fs_lock);
   length = file_length(fd->file);
-  //lock_release(&fs_lock);
   return length;
 }
  
@@ -348,30 +339,6 @@ sys_filesize (int handle)
 static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
-  struct file_descriptor *fd = lookup_fd(handle);
-  unsigned i;
-  int ret = -1;
-
-   if(!fd){
-	return -1;
-	}
-   lock_acquire(&fs_lock);
-   ret = file_read(fd->file,udst_,size);
-   lock_release(&fs_lock);
-   return ret;
-   
-  
-  
-  /*lock_acquire(&fs_lock);
-  if(handle == STDIN_FILENO)
-  {
-    for(i = 0; i != size; i++)
-      	*(uint8_t *)(udst_ +i) = input_getc();
-	ret = size;
-	lock_release(&fs_lock);
-	return ret;
-  }
-  else if (handle == STDOUT_FILENO)
 	
  if(!verify_user(udst_) || !udst_)
  {
@@ -386,25 +353,8 @@ sys_read (int handle, void *udst_, unsigned size)
 	result = file_read(f,udst_,size);
 	lock_release(&fs_lock);
   }
-  else if(!is_user_vaddr(udst_) || !is_user_vaddr(udst_+size)){
-    lock_release(&fs_lock);
-    sys_exit(-1);
-  }
-  else{
-    if(!fd){
-	lock_release(&fs_lock);
-	return -1;
-    }
-    if(!fd->file){
-	lock_release(&fs_lock);
-	return -1;
-    }
-    else
-       ret = file_read(fd->file,udst_,size);
-  }    
-  lock_release(&fs_lock);
-  return ret;*/
 	
+  return result;
 }
  
 /* Write system call. */
@@ -479,9 +429,7 @@ sys_seek (int handle, unsigned position)
   {
     return -1;
    }
-  //lock_acquire(&fs_lock);
   file_seek(fd->file,position);
-  //lock_release(&fs_lock);
   return 0;
 }
  
@@ -494,9 +442,7 @@ sys_tell (int handle)
   {
     return -1;
   }
-  //lock_acquire(&fs_lock);
   file_tell(fd->file);
-  //lock_release(&fs_lock);
   return 0;
 }
  
@@ -539,4 +485,5 @@ syscall_exit (void)
   
   return;
 }
+
 
