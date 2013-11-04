@@ -238,8 +238,9 @@ sys_create (const char *ufile, unsigned initial_size)
   int result;
   if(!ufile || !verify_user(ufile))
     return sys_exit(-1);
-
+  lock_acquire(&fs_lock);
   result = filesys_create(ufile,initial_size);
+  lock_release(&fs_lock);
   return result;
 }
  
@@ -256,7 +257,9 @@ sys_remove (const char *ufile)
 	{
 		sys_exit(-1);
 	}
-   	result =filesys_remove(ufile);
+   lock_acquire(&fs_lock);
+   result =filesys_remove(ufile);
+   lock_release(&fs_lock);
 	return result;
 }
  
@@ -283,7 +286,9 @@ sys_open (const char *ufile)
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
+      lock_acquire(&fs_lock);
       fd->file = filesys_open (kfile);
+	lock_release(&fs_lock);
       if (fd->file != NULL)
         {
           handle = fd->handle = cur->next_handle++;
@@ -451,9 +456,7 @@ sys_tell (int handle)
 static int
 sys_close (int handle) 
 {
-
   struct file_descriptor *fd = lookup_fd(handle);
-
   if(!fd)
   {
     return -1;
