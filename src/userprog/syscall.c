@@ -341,7 +341,6 @@ sys_filesize (int handle)
   //lock_acquire(&fs_lock);
   length = file_length(fd->file);
   //lock_release(&fs_lock);
-  free(fd);
   return length;
 }
  
@@ -442,7 +441,6 @@ sys_seek (int handle, unsigned position)
   //lock_acquire(&fs_lock);
   file_seek(fd->file,position);
   //lock_release(&fs_lock);
-  free(fd);
   return 0;
 }
  
@@ -458,7 +456,6 @@ sys_tell (int handle)
   //lock_acquire(&fs_lock);
   file_tell(fd->file);
   //lock_release(&fs_lock);
-  free(fd);
   return 0;
 }
  
