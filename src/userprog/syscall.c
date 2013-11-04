@@ -267,13 +267,14 @@ sys_open (const char *ufile)
 
  if(is_user_vaddr(kfile))
   {
-    sys_exit(-1);
+   return -1;
   }
   fd = (struct file_descriptor *)malloc (sizeof (struct file_descriptor));
   if (fd != NULL)
     {
       lock_acquire (&fs_lock);
       fd->file = filesys_open (kfile);
+      lock_release (&fs_lock);
       if (fd->file != NULL)
         {
           handle = fd->handle = cur->next_handle++;
@@ -285,7 +286,7 @@ sys_open (const char *ufile)
 		free(fd);
 		return -1;
 	}
-      lock_release (&fs_lock);
+      
     }
   palloc_free_page (kfile);
   return handle;
@@ -300,12 +301,15 @@ lookup_fd (int handle)
 /* Add code to lookup file descriptor in the current thread's fds */
   struct thread *cur = thread_current();
   struct list_elem *e;
+  
+	if(handle == STDOUT_FILENO || handle == STDIN_FILENO)
+		return NULL;
 
-  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
-  {
+  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=e->next)
+  {   
       struct file_descriptor *fd;
       fd = list_entry (e,struct file_descriptor,elem);
-      if(fd->handle == handle)
+      if(fd != NULL && fd->handle == handle)
          return fd;
   }
   return NULL;
@@ -328,11 +332,21 @@ sys_filesize (int handle)
 static int
 sys_read (int handle, void *udst_, unsigned size) 
 {
-  
-  struct file_descriptor *fd;
+  struct file_descriptor *fd = lookup_fd(handle);
   unsigned i;
   int ret = -1;
-  lock_acquire(&fs_lock);
+
+   if(!fd){
+	return -1;
+	}
+   lock_acquire(&fs_lock);
+   ret = file_read(fd->file,udst_,size);
+   lock_release(&fs_lock);
+   return ret;
+   
+  
+  
+  /*lock_acquire(&fs_lock);
   if(handle == STDIN_FILENO)
   {
     for(i = 0; i != size; i++)
@@ -351,7 +365,6 @@ sys_read (int handle, void *udst_, unsigned size)
     sys_exit(-1);
   }
   else{
-    fd = lookup_fd(handle);
     if(!fd){
 	lock_release(&fs_lock);
 	return -1;
@@ -364,7 +377,7 @@ sys_read (int handle, void *udst_, unsigned size)
        ret = file_read(fd->file,udst_,size);
   }    
   lock_release(&fs_lock);
-  return ret;
+  return ret;*/
 }
  
 /* Write system call. */
@@ -492,7 +505,7 @@ syscall_exit (void)
   struct thread *cur = thread_current();
   struct list_elem *e;
 
-  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=list_next(e))
+  for(e=list_begin(&cur->fds); e!=list_end(&cur->fds);e=e->next)
   {
      struct file_descriptor *fd;
      fd = list_entry(e, struct file_descriptor, elem);
