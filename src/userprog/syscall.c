@@ -511,8 +511,8 @@ syscall_exit (void)
      fd = list_entry(e, struct file_descriptor, elem);
      lock_acquire(&fs_lock);
      file_close(fd->file);
-     lock_release(&fs_lock);
      free(fd);
+     lock_release(&fs_lock);
   }
   return;
 }
